@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # MongoDB
+  mongodb:
+    image: mongo:7
+    container_name: newsception-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: newsception
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - newsception-network
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: newsception-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - newsception-network
+
+  # Backend API
+  backend:
+    build: .
+    container_name: newsception-backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      MONGODB_URI: mongodb://admin:password123@mongodb:27017/newsception?authSource=admin
+      REDIS_URL: redis://redis:6379
+      FRONTEND_URL: http://localhost:3000
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - newsception-network
+    volumes:
+      - ./logs:/app/logs
+
+  # ML Service (Optional)
+  ml-service:
+    build: ./ml-service
+    container_name: newsception-ml
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      PYTHONUNBUFFERED: 1
+    networks:
+      - newsception-network
+
+networks:
+  newsception-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+  redis_data:
