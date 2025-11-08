@@ -1,0 +1,104 @@
+{
+  "name": "DebateModeration",
+  "type": "object",
+  "properties": {
+    "room_id": {
+      "type": "string",
+      "description": "Reference to DebateRoom"
+    },
+    "participant_id": {
+      "type": "string",
+      "description": "Participant identifier"
+    },
+    "action_type": {
+      "type": "string",
+      "enum": [
+        "warning",
+        "mute",
+        "flag",
+        "kick"
+      ],
+      "description": "Moderation action taken"
+    },
+    "reason": {
+      "type": "string",
+      "enum": [
+        "hate_speech",
+        "personal_attack",
+        "off_topic",
+        "spam",
+        "inappropriate"
+      ],
+      "description": "Reason for moderation"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "description": "Severity level"
+    },
+    "transcript_snippet": {
+      "type": "string",
+      "description": "The problematic text/speech"
+    },
+    "ai_confidence": {
+      "type": "number",
+      "description": "AI confidence in detection (0-100)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "upheld",
+        "overturned",
+        "escalated"
+      ],
+      "default": "pending",
+      "description": "Status of moderation action"
+    },
+    "human_reviewed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether a human reviewed this"
+    }
+  },
+  "required": [
+    "room_id",
+    "participant_id",
+    "action_type",
+    "reason"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "participant_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

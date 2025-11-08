@@ -1,0 +1,45 @@
+{
+  "name": "Claim",
+  "type": "object",
+  "properties": {
+    "article_id": {
+      "type": "string",
+      "description": "Reference to Article entity"
+    },
+    "topic": {
+      "type": "string",
+      "description": "Topic"
+    },
+    "claim_text": {
+      "type": "string",
+      "description": "The extracted claim"
+    },
+    "claim_type": {
+      "type": "string",
+      "enum": [
+        "factual",
+        "opinion",
+        "prediction",
+        "statistic"
+      ],
+      "description": "Type of claim"
+    },
+    "confidence_score": {
+      "type": "number",
+      "description": "AI confidence in claim extraction (0-100)"
+    },
+    "verifiable": {
+      "type": "boolean",
+      "description": "Whether claim is verifiable"
+    },
+    "fact_check_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of fact-checks on this claim"
+    }
+  },
+  "required": [
+    "claim_text",
+    "claim_type"
+  ]
+}

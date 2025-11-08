@@ -1,0 +1,54 @@
+{
+  "name": "NewsFeedItem",
+  "type": "object",
+  "properties": {
+    "headline": {
+      "type": "string",
+      "description": "News headline"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Brief summary"
+    },
+    "topic": {
+      "type": "string",
+      "description": "Main topic/category"
+    },
+    "location": {
+      "type": "string",
+      "description": "Geographic location relevance"
+    },
+    "source_count": {
+      "type": "number",
+      "description": "Number of sources covering this"
+    },
+    "trending_score": {
+      "type": "number",
+      "description": "Trending score for feed ranking"
+    },
+    "thumbnail_url": {
+      "type": "string",
+      "description": "Image URL"
+    },
+    "perspectives": {
+      "type": "object",
+      "description": "Different viewpoints on this topic",
+      "properties": {
+        "count": {
+          "type": "number"
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "headline",
+    "summary",
+    "topic"
+  ]
+}

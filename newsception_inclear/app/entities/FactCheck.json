@@ -1,0 +1,87 @@
+{
+  "name": "FactCheck",
+  "type": "object",
+  "properties": {
+    "article_id": {
+      "type": "string",
+      "description": "Reference to Article entity"
+    },
+    "claim": {
+      "type": "string",
+      "description": "The claim being fact-checked"
+    },
+    "user_verdict": {
+      "type": "string",
+      "enum": [
+        "accurate",
+        "misleading",
+        "false",
+        "unverified"
+      ],
+      "description": "User's verdict on the claim"
+    },
+    "evidence": {
+      "type": "string",
+      "description": "Evidence provided by user"
+    },
+    "source_links": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "URLs to supporting sources"
+    },
+    "votes_helpful": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of users who found this helpful"
+    },
+    "votes_unhelpful": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of users who found this unhelpful"
+    },
+    "credibility_points": {
+      "type": "number",
+      "default": 0,
+      "description": "Points earned by user for this fact-check"
+    },
+    "verified_by_admin": {
+      "type": "boolean",
+      "default": false,
+      "description": "Admin verification status"
+    }
+  },
+  "required": [
+    "claim",
+    "user_verdict"
+  ],
+  "rls": {
+    "create": {},
+    "read": {},
+    "update": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

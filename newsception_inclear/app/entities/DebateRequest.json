@@ -1,0 +1,81 @@
+{
+  "name": "DebateRequest",
+  "type": "object",
+  "properties": {
+    "topic": {
+      "type": "string",
+      "description": "The topic being debated"
+    },
+    "article_id": {
+      "type": "string",
+      "description": "Reference to Article entity"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "User who requested the debate"
+    },
+    "side_preference": {
+      "type": "string",
+      "enum": [
+        "A",
+        "B",
+        "neutral"
+      ],
+      "description": "Which perspective the user wants to debate for"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "room_created",
+        "completed"
+      ],
+      "default": "pending",
+      "description": "Status of the debate request"
+    }
+  },
+  "required": [
+    "topic"
+  ],
+  "rls": {
+    "create": {
+      "user_email": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

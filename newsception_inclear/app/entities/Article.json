@@ -1,0 +1,69 @@
+{
+  "name": "Article",
+  "type": "object",
+  "properties": {
+    "topic": {
+      "type": "string",
+      "description": "The topic/search query"
+    },
+    "title": {
+      "type": "string",
+      "description": "Article title"
+    },
+    "source": {
+      "type": "string",
+      "description": "News source name"
+    },
+    "url": {
+      "type": "string",
+      "description": "Article URL"
+    },
+    "summary": {
+      "type": "string",
+      "description": "AI-generated summary"
+    },
+    "stance": {
+      "type": "string",
+      "enum": [
+        "support",
+        "oppose",
+        "neutral"
+      ],
+      "description": "Article stance on the topic"
+    },
+    "sentiment": {
+      "type": "string",
+      "enum": [
+        "positive",
+        "negative",
+        "neutral"
+      ],
+      "description": "Overall sentiment"
+    },
+    "credibility_score": {
+      "type": "number",
+      "description": "Credibility score from 0-100"
+    },
+    "key_points": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Key points from the article"
+    },
+    "perspective_type": {
+      "type": "string",
+      "enum": [
+        "positive",
+        "negative",
+        "neutral"
+      ],
+      "description": "Which perspective this article represents"
+    }
+  },
+  "required": [
+    "topic",
+    "title",
+    "summary"
+  ]
+}

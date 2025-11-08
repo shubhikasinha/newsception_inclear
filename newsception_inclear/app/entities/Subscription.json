@@ -1,0 +1,91 @@
+{
+  "name": "Subscription",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "User ID"
+    },
+    "subscription_type": {
+      "type": "string",
+      "enum": [
+        "upsc",
+        "business",
+        "technology",
+        "policy",
+        "science",
+        "custom"
+      ],
+      "description": "Type of specialized subscription"
+    },
+    "topics_of_interest": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Specific topics user is interested in"
+    },
+    "delivery_frequency": {
+      "type": "string",
+      "enum": [
+        "daily",
+        "weekly",
+        "real_time"
+      ],
+      "default": "daily",
+      "description": "How often to deliver summaries"
+    },
+    "summary_format": {
+      "type": "string",
+      "enum": [
+        "brief",
+        "detailed",
+        "exam_focused"
+      ],
+      "default": "brief",
+      "description": "Format of summaries"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Subscription active status"
+    }
+  },
+  "required": [
+    "subscription_type"
+  ],
+  "rls": {
+    "create": {
+      "user_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

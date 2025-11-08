@@ -1,0 +1,36 @@
+{
+  "name": "LocationTrending",
+  "type": "object",
+  "properties": {
+    "location": {
+      "type": "string",
+      "description": "City or region name"
+    },
+    "country": {
+      "type": "string",
+      "description": "Country"
+    },
+    "topic": {
+      "type": "string",
+      "description": "Trending topic"
+    },
+    "headline": {
+      "type": "string",
+      "description": "Main headline"
+    },
+    "trend_score": {
+      "type": "number",
+      "description": "How trending this is (0-100)"
+    },
+    "last_updated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last time this was updated"
+    }
+  },
+  "required": [
+    "location",
+    "topic",
+    "headline"
+  ]
+}

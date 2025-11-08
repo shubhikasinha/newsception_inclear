@@ -1,0 +1,57 @@
+{
+  "name": "BiasAnalysis",
+  "type": "object",
+  "properties": {
+    "article_id": {
+      "type": "string",
+      "description": "Reference to Article entity"
+    },
+    "topic": {
+      "type": "string",
+      "description": "Topic being analyzed"
+    },
+    "bias_score": {
+      "type": "number",
+      "description": "Bias score from -100 to 100"
+    },
+    "biased_terms": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "term": {
+            "type": "string"
+          },
+          "context": {
+            "type": "string"
+          },
+          "bias_type": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "List of biased terms found"
+    },
+    "reasoning": {
+      "type": "string",
+      "description": "AI explanation of bias detection"
+    },
+    "coverage_tilt": {
+      "type": "string",
+      "enum": [
+        "heavily_left",
+        "left",
+        "center_left",
+        "center",
+        "center_right",
+        "right",
+        "heavily_right"
+      ],
+      "description": "Overall coverage tilt"
+    }
+  },
+  "required": [
+    "topic",
+    "bias_score"
+  ]
+}

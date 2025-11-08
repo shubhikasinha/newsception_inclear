@@ -1,0 +1,52 @@
+{
+  "name": "HistoricalContext",
+  "type": "object",
+  "properties": {
+    "topic": {
+      "type": "string",
+      "description": "Main topic"
+    },
+    "current_article_id": {
+      "type": "string",
+      "description": "Current article reference"
+    },
+    "timeline_events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "headline": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "significance": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Historical timeline of related events"
+    },
+    "key_developments": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Key developments over time"
+    },
+    "related_topics": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Related historical topics"
+    }
+  },
+  "required": [
+    "topic"
+  ]
+}

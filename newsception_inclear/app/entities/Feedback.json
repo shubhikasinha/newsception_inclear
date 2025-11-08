@@ -1,0 +1,72 @@
+{
+  "name": "Feedback",
+  "type": "object",
+  "properties": {
+    "topic": {
+      "type": "string",
+      "description": "The topic that was compared"
+    },
+    "was_helpful": {
+      "type": "boolean",
+      "description": "Was the comparison helpful"
+    },
+    "felt_balanced": {
+      "type": "boolean",
+      "description": "Did both sides feel balanced"
+    },
+    "comments": {
+      "type": "string",
+      "description": "Additional comments from user"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Optional user email"
+    },
+    "rating": {
+      "type": "number",
+      "description": "Rating from 1-5"
+    }
+  },
+  "required": [
+    "topic"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

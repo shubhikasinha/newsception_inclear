@@ -1,0 +1,68 @@
+{
+  "name": "SentimentAnalysis",
+  "type": "object",
+  "properties": {
+    "article_id": {
+      "type": "string",
+      "description": "Reference to Article entity"
+    },
+    "topic": {
+      "type": "string",
+      "description": "Topic being analyzed"
+    },
+    "overall_sentiment": {
+      "type": "string",
+      "enum": [
+        "positive",
+        "negative",
+        "neutral",
+        "mixed"
+      ],
+      "description": "Overall sentiment of the article"
+    },
+    "sentiment_score": {
+      "type": "number",
+      "description": "Sentiment score from -1 (very negative) to 1 (very positive)"
+    },
+    "confidence": {
+      "type": "number",
+      "description": "Confidence in sentiment analysis (0-100)"
+    },
+    "key_entities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "sentiment": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Extracted entities with their sentiment"
+    },
+    "key_topics": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Main topics discussed"
+    },
+    "emotional_tone": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Emotional tones detected (anger, joy, fear, etc.)"
+    }
+  },
+  "required": [
+    "topic",
+    "overall_sentiment"
+  ]
+}

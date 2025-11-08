@@ -1,0 +1,56 @@
+{
+  "name": "DebateRoom",
+  "type": "object",
+  "properties": {
+    "topic": {
+      "type": "string",
+      "description": "The debate topic"
+    },
+    "article_id": {
+      "type": "string",
+      "description": "Reference to Article entity"
+    },
+    "room_name": {
+      "type": "string",
+      "description": "Unique room identifier for LiveKit"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "ended"
+      ],
+      "default": "active",
+      "description": "Room status"
+    },
+    "side_a_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of participants on Side A"
+    },
+    "side_b_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of participants on Side B"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the debate started"
+    },
+    "ended_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the debate ended"
+    },
+    "total_participants": {
+      "type": "number",
+      "default": 0,
+      "description": "Total number of participants"
+    }
+  },
+  "required": [
+    "topic",
+    "room_name"
+  ]
+}

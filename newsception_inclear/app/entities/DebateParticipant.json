@@ -1,0 +1,94 @@
+{
+  "name": "DebateParticipant",
+  "type": "object",
+  "properties": {
+    "room_id": {
+      "type": "string",
+      "description": "Reference to DebateRoom"
+    },
+    "participant_id": {
+      "type": "string",
+      "description": "Unique participant identifier"
+    },
+    "side": {
+      "type": "string",
+      "enum": [
+        "A",
+        "B"
+      ],
+      "description": "Which side they're on"
+    },
+    "speaking_time_seconds": {
+      "type": "number",
+      "default": 0,
+      "description": "Total speaking time in seconds"
+    },
+    "speaking_turns": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of times they spoke"
+    },
+    "warnings_received": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of moderation warnings"
+    },
+    "muted_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Times they were muted"
+    },
+    "joined_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When they joined"
+    },
+    "left_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When they left"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Currently in the room"
+    }
+  },
+  "required": [
+    "room_id",
+    "participant_id",
+    "side"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "$or": [
+        {
+          "participant_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "participant_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
