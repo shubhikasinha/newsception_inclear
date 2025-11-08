@@ -1,0 +1,38 @@
+# Node dependencies
+node_modules/
+newsception_inclear/node_modules/
+
+# Next.js build output
+.next/
+newsception_inclear/.next/
+
+# Build artifacts
+out/
+newsception_inclear/out/
+build/
+newsception_inclear/build/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+newsception_inclear/npm-debug.log*
+newsception_inclear/yarn-debug.log*
+newsception_inclear/yarn-error.log*
+newsception_inclear/pnpm-debug.log*
+
+# Environment files
+.env*
+newsception_inclear/.env*
+
+# Misc
+.DS_Store
+newsception_inclear/.DS_Store
+.vercel
+newsception_inclear/.vercel
+
+# TypeScript
+*.tsbuildinfo
+newsception_inclear/*.tsbuildinfo
+newsception_inclear/next-env.d.ts
