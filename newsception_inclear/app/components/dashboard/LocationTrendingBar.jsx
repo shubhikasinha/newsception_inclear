@@ -1,97 +1,46 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { MapPin, Flame, TrendingUp } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { MapPin, Flame } from "lucide-react";
+import { loadTrendingTopics, FALLBACK_TRENDING_TOPICS } from "@/lib/trending";
+
+const FALLBACK_TOPICS = FALLBACK_TRENDING_TOPICS.slice(0, 5);
 
 export default function LocationTrendingBar({ location, onTopicClick }) {
-  const [trendingTopics, setTrendingTopics] = useState([]);
+  const [trendingTopics, setTrendingTopics] = useState(FALLBACK_TOPICS);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (location) {
-      loadLocationTrending();
-    }
-  }, [location]);
+    let isActive = true;
 
-  const loadLocationTrending = async () => {
-    try {
-      // Check cache first
-      const cached = await base44.entities.LocationTrending.filter(
-        { location: location?.city || 'Global' },
-        '-trend_score',
-        5
-      );
+    const fetchTrending = async () => {
+      try {
+        const topics = await loadTrendingTopics({
+          city: location?.city,
+          country: location?.country,
+          limit: 5,
+        });
 
-      if (cached && cached.length > 0) {
-        const recentCache = cached[0];
-        const cacheAge = Date.now() - new Date(recentCache.last_updated || recentCache.created_date).getTime();
-        const oneHour = 60 * 60 * 1000;
-
-        if (cacheAge < oneHour) {
-          setTrendingTopics(cached);
+        if (isActive) {
+          setTrendingTopics(topics.length > 0 ? topics : FALLBACK_TOPICS);
+        }
+      } catch (error) {
+        console.error("Error loading location trending:", error);
+        if (isActive) {
+          setTrendingTopics(FALLBACK_TOPICS);
+        }
+      } finally {
+        if (isActive) {
           setIsLoading(false);
-          return;
         }
       }
+    };
 
-      // Fetch fresh location-based trending
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `Generate 5 trending news topics specifically relevant to ${location?.city || 'Global'}, ${location?.country || 'World'} right now.
+    fetchTrending();
 
-These should be:
-- Real local/regional news if it's a specific city
-- International news with local relevance
-- Topics people in this area are currently discussing
-
-For each topic provide:
-- A concise headline (6-10 words)
-- The main topic keyword
-- A trending score (70-100 based on relevance)
-
-Make these feel authentic to what would actually be trending in this location.`,
-        add_context_from_internet: true,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            trending: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  headline: { type: "string" },
-                  topic: { type: "string" },
-                  trend_score: { type: "number" }
-                }
-              }
-            }
-          }
-        }
-      });
-
-      if (result?.trending) {
-        const topicsToSave = result.trending.map(item => ({
-          location: location?.city || 'Global',
-          country: location?.country || 'World',
-          topic: item.topic,
-          headline: item.headline,
-          trend_score: item.trend_score,
-          last_updated: new Date().toISOString()
-        }));
-
-        await base44.entities.LocationTrending.bulkCreate(topicsToSave);
-        setTrendingTopics(result.trending);
-      }
-    } catch (error) {
-      console.error("Error loading location trending:", error);
-      // Fallback
-      setTrendingTopics([
-        { headline: "AI Regulation Debate", topic: "Technology", trend_score: 95 },
-        { headline: "Climate Action Summit", topic: "Environment", trend_score: 88 },
-        { headline: "Economic Policy Changes", topic: "Economy", trend_score: 82 }
-      ]);
-    }
-    setIsLoading(false);
-  };
+    return () => {
+      isActive = false;
+    };
+  }, [location?.city, location?.country]);
 
   if (isLoading) {
     return (
@@ -126,7 +75,7 @@ Make these feel authentic to what would actually be trending in this location.`,
               <button
                 key={index}
                 onClick={() => onTopicClick(topic.headline)}
-                className="flex items-center gap-3 px-4 py-2 bg-[#d4af37] hover:bg-[#b8860b] transition-colors whitespace-nowrap group flex-shrink-0"
+                className="flex items-center gap-3 px-4 py-2 bg-[#d4af37] hover:bg-[#b8860b] transition-colors whitespace-nowrap group shrink-0"
               >
                 <Flame className="w-4 h-4 text-red-600" />
                 <span className="font-serif font-semibold text-black">

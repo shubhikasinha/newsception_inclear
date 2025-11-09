@@ -7,6 +7,8 @@ export interface IDebateRequest extends Document {
   side?: 'A' | 'B';
   status: 'pending' | 'room_created' | 'completed';
   roomId?: mongoose.Types.ObjectId;
+  votes: number;
+  voters: string[];
   createdAt: Date;
 }
 
@@ -26,6 +28,8 @@ const DebateRequestSchema: Schema = new Schema(
       index: true,
     },
     roomId: { type: Schema.Types.ObjectId, ref: 'DebateRoom' },
+    votes: { type: Number, default: 1 },
+    voters: { type: [String], default: [] },
   },
   {
     timestamps: true,

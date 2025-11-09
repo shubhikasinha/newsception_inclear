@@ -1,21 +1,15 @@
 import { Request, Response } from 'express';
 import { asyncHandler, CustomError } from '../middleware/errorHandler';
-import newsService from '../services/newsService';
-import mlService from '../services/mlService';
 import { cacheGet, cacheSet } from '../config/redis';
-import Article from '../models/Article';
-import SentimentAnalysis from '../models/SentimentAnalysis';
-import BiasAnalysis from '../models/BiasAnalysis';
-import Claim from '../models/Claim';
-import ClaimVerification from '../models/ClaimVerification';
 import SearchHistory from '../models/SearchHistory';
 import LocationTrending from '../models/LocationTrending';
 import { logger } from '../utils/logger';
+import { analyzeTopic } from '../services/topicAnalysisService';
 
 const CACHE_TTL = parseInt(process.env.ARTICLE_CACHE_TTL || '3600');
 
 export const searchNews = asyncHandler(async (req: Request, res: Response) => {
-  const { topic, location } = req.query;
+  const { topic, location, refresh } = req.query;
 
   if (!topic || typeof topic !== 'string') {
     throw new CustomError('Topic is required', 400);
@@ -23,159 +17,53 @@ export const searchNews = asyncHandler(async (req: Request, res: Response) => {
 
   // Check cache first
   const cacheKey = `search:${topic}:${location || 'global'}`;
-  const cached = await cacheGet(cacheKey);
-  
-  if (cached) {
-    logger.info(`Cache hit for topic: ${topic}`);
-    return res.json(JSON.parse(cached));
-  }
+  const shouldRefresh = refresh === 'true';
 
-  // Fetch news articles
-  logger.info(`Fetching news for topic: ${topic}`);
-  const articles = await newsService.fetchNews(topic, location as string);
-
-  if (articles.length === 0) {
-    throw new CustomError('No articles found for this topic', 404);
-  }
-
-  // Send to ML service for analysis
-  logger.info(`Analyzing ${articles.length} articles`);
-  const analyzed = await mlService.analyzeArticles(articles, topic);
-
-  // Save to database
-  const savedArticles = [];
-  for (let i = 0; i < articles.length; i++) {
-    const article = articles[i];
-    const analysis = analyzed[i];
-
-    // Check if article already exists
-    let dbArticle = await Article.findOne({ url: article.url });
-    
-    if (!dbArticle) {
-      dbArticle = await Article.create({
-        topic,
-        title: article.title,
-        url: article.url,
-        source: article.source,
-        description: article.description,
-        publishedAt: article.publishedAt,
-        perspective: analysis.perspective,
-        stance: analysis.stance,
-        sentiment: analysis.sentiment,
-        sentimentScore: analysis.sentimentScore,
-        summary: analysis.summary,
-        keyPoints: analysis.keyPoints,
-        credibilityScore: analysis.credibilityScore,
-        biasScore: analysis.biasScore,
-        imageUrl: article.imageUrl,
-        author: article.author,
-        location: location as string || 'global',
-      });
-
-      // Save sentiment analysis
-      await SentimentAnalysis.create({
-        articleId: dbArticle._id,
-        topic,
-        overallSentiment: analysis.sentiment,
-        sentimentScore: analysis.sentimentScore,
-        confidence: 85,
-        entities: analysis.entities,
-        emotionalTones: analysis.emotionalTones,
-        keyTopics: analysis.keyPoints,
-      });
-
-      // Save bias analysis
-      await BiasAnalysis.create({
-        articleId: dbArticle._id,
-        topic,
-        biasScore: analysis.biasScore,
-        coverageTilt: analysis.biasAnalysis.coverageTilt,
-        loadedTerms: analysis.biasAnalysis.loadedTerms,
-        reasoning: analysis.biasAnalysis.reasoning,
-        confidence: 80,
-      });
-
-      // Save claims
-      for (const claim of analysis.claims) {
-        const savedClaim = await Claim.create({
-          articleId: dbArticle._id,
-          topic,
-          claimText: claim.text,
-          claimType: claim.type,
-          verifiability: claim.verifiability,
-          confidence: claim.confidence,
-        });
-
-        // Mock claim verification
-        await ClaimVerification.create({
-          claimId: savedClaim._id,
-          topic,
-          accuracyScore: claim.verifiability,
-          verdict: claim.verifiability > 70 ? 'verified' : 'unverified',
-          evidence: [],
-          reasoning: 'Automated verification based on source credibility',
-          confidence: claim.confidence,
-        });
-      }
+  if (!shouldRefresh) {
+    const cached = await cacheGet(cacheKey);
+    if (cached) {
+      logger.info(`Cache hit for topic: ${topic}`);
+      return res.json(JSON.parse(cached));
     }
-
-    savedArticles.push(dbArticle);
   }
 
-  // Update search history
-  await SearchHistory.findOneAndUpdate(
-    { topic },
-    {
-      $inc: { searchCount: 1 },
-      $set: { lastSearchedAt: new Date() },
-      $addToSet: { locations: location || 'global' },
-    },
-    { upsert: true, new: true }
-  );
+  const analysis = await analyzeTopic(topic, (location as string) || 'global', {
+    forceRefresh: shouldRefresh,
+  });
 
-  // Update location trending
-  if (location) {
-    await LocationTrending.findOneAndUpdate(
-      { location: location as string },
-      {
-        $push: {
-          topics: {
-            $each: [{ topic, count: 1, lastSeen: new Date() }],
-            $slice: -10,
-          },
-        },
-      },
-      { upsert: true, new: true }
-    );
-  }
+  const supportArticles = analysis.groups.support;
+  const opposeArticles = analysis.groups.oppose;
 
-  // Group by perspective
-  const supportArticles = savedArticles.filter(a => a.perspective === 'support');
-  const opposeArticles = savedArticles.filter(a => a.perspective === 'oppose');
-
-  const result = {
-    topic,
-    location: location || 'global',
+  const responsePayload = {
+    topic: analysis.topic,
+    location: analysis.location,
+    refreshed: analysis.refreshed,
     perspectives: {
       support: {
-        label: supportArticles[0]?.stance || `Supporting ${topic}`,
+        label: supportArticles[0]?.stance || `Supporting ${analysis.topic}`,
         articles: supportArticles,
         count: supportArticles.length,
       },
       oppose: {
-        label: opposeArticles[0]?.stance || `Critical of ${topic}`,
+        label: opposeArticles[0]?.stance || `Critical of ${analysis.topic}`,
         articles: opposeArticles,
         count: opposeArticles.length,
       },
+      neutral: {
+        label: analysis.groups.neutral[0]?.stance || `Neutral coverage of ${analysis.topic}`,
+        articles: analysis.groups.neutral,
+        count: analysis.groups.neutral.length,
+      },
     },
-    totalSources: savedArticles.length,
-    timestamp: new Date().toISOString(),
+    totalSources: analysis.articles.length,
+    timestamp: analysis.lastUpdated?.toISOString() || new Date().toISOString(),
   };
 
-  // Cache the result
-  await cacheSet(cacheKey, JSON.stringify(result), CACHE_TTL);
+  if (!shouldRefresh) {
+    await cacheSet(cacheKey, JSON.stringify(responsePayload), CACHE_TTL);
+  }
 
-  return res.json(result);
+  return res.json(responsePayload);
 });
 
 export const getTrendingTopics = asyncHandler(async (req: Request, res: Response) => {

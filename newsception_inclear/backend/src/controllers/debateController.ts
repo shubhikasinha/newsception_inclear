@@ -17,26 +17,25 @@ export const requestDebate = asyncHandler(async (req: Request, res: Response) =>
     throw new CustomError('Topic is required', 400);
   }
 
-  // Check if user already requested for this topic
-  const existing = await DebateRequest.findOne({ topic, userId, status: 'pending' });
-  if (existing) {
-    throw new CustomError('You have already requested a debate for this topic', 400);
-  }
+  // Check if user already requested/voted for this topic
+  const existingRequest = await DebateRequest.findOne({ topic, status: 'pending' });
+  
+  if (existingRequest) {
+    // User wants to vote on existing request
+    if (existingRequest.voters.includes(userId)) {
+      throw new CustomError('You have already voted for this debate topic', 400);
+    }
+    
+    // Add vote
+    existingRequest.votes += 1;
+    existingRequest.voters.push(userId);
+    await existingRequest.save();
+    
+    const request = existingRequest;
+    const requestCount = request.votes;
 
-  // Create debate request
-  const request = await DebateRequest.create({
-    topic,
-    articleId,
-    userId,
-    side,
-    status: 'pending',
-  });
-
-  // Count pending requests for this topic
-  const requestCount = await DebateRequest.countDocuments({ topic, status: 'pending' });
-
-  // Check if threshold met
-  if (requestCount >= DEBATE_THRESHOLD) {
+    // Check if threshold met with new vote
+    if (requestCount >= DEBATE_THRESHOLD) {
     // Get article for perspectives
     const supportArticle = await Article.findOne({ topic, perspective: 'support' });
     const opposeArticle = await Article.findOne({ topic, perspective: 'oppose' });
@@ -52,26 +51,47 @@ export const requestDebate = asyncHandler(async (req: Request, res: Response) =>
       status: 'active',
     });
 
-    // Update all pending requests
-    await DebateRequest.updateMany(
-      { topic, status: 'pending' },
-      { status: 'room_created', roomId: room._id }
-    );
+      // Update request status
+      await DebateRequest.updateMany(
+        { topic, status: 'pending' },
+        { status: 'room_created', roomId: room._id }
+      );
+
+      return res.json({
+        success: true,
+        message: 'Debate room created! Threshold reached.',
+        request,
+        room,
+        votes: requestCount,
+        threshold: DEBATE_THRESHOLD,
+      });
+    }
 
     return res.json({
       success: true,
-      message: 'Debate room created!',
+      message: 'Vote added to debate request',
       request,
-      room,
-      requestCount,
+      votes: requestCount,
+      threshold: DEBATE_THRESHOLD,
     });
   }
 
+  // Create new debate request
+  const request = await DebateRequest.create({
+    topic,
+    articleId,
+    userId,
+    side,
+    status: 'pending',
+    votes: 1,
+    voters: [userId],
+  });
+
   return res.json({
     success: true,
-    message: 'Debate request submitted',
+    message: 'Debate request created',
     request,
-    requestCount,
+    votes: 1,
     threshold: DEBATE_THRESHOLD,
   });
 });

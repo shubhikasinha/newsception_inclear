@@ -1,153 +1,62 @@
-import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+'use client';
+import React, { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Heart, Frown, Meh, Smile, TrendingUp, Brain, Tag, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { generateSentimentInsights, generateClaimVerifications } from "@/lib/insights";
 
-export default function EnhancedSentimentPanel({ articles, topic }) {
+export default function EnhancedSentimentPanel({ articles = [], topic, claims = [] }) {
   const [sentimentData, setSentimentData] = useState([]);
   const [verificationData, setVerificationData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const articleKey = useMemo(
+    () => articles.map((article) => article?.id || article?.title || "unknown").join("|"),
+    [articles]
+  );
+
+  const claimsKey = useMemo(
+    () => claims.map((claim) => claim?.claim_text || "").join("|"),
+    [claims]
+  );
+
   useEffect(() => {
-    if (articles && articles.length > 0) {
-      analyzeSentiments();
+    if (!articles || articles.length === 0) {
+      setSentimentData([]);
+      setVerificationData([]);
+      setIsLoading(false);
+      return;
     }
-  }, [articles]);
 
-  const analyzeSentiments = async () => {
+    let isMounted = true;
     setIsLoading(true);
-    try {
-      // Analyze sentiments for all articles
-      const analysisPromises = articles.slice(0, 10).map(async (article) => {
-        const result = await base44.integrations.Core.InvokeLLM({
-          prompt: `Analyze the sentiment and extract key information from this article about "${topic}":
 
-Title: ${article.title}
-Source: ${article.source}
-Summary: ${article.summary}
+    const runAnalysis = async () => {
+      try {
+        const [sentiments, verifications] = await Promise.all([
+          generateSentimentInsights(topic, articles.slice(0, 10)),
+          generateClaimVerifications(topic, claims.slice(0, 10)),
+        ]);
 
-Provide:
-1. Overall sentiment (positive, negative, neutral, mixed)
-2. Sentiment score (-1 to 1)
-3. Confidence (0-100)
-4. Key entities mentioned (people, organizations, locations) with their sentiment
-5. Main topics discussed
-6. Emotional tones (e.g., anger, hope, fear, urgency)`,
-          response_json_schema: {
-            type: "object",
-            properties: {
-              overall_sentiment: { type: "string" },
-              sentiment_score: { type: "number" },
-              confidence: { type: "number" },
-              key_entities: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    name: { type: "string" },
-                    type: { type: "string" },
-                    sentiment: { type: "string" }
-                  }
-                }
-              },
-              key_topics: {
-                type: "array",
-                items: { type: "string" }
-              },
-              emotional_tone: {
-                type: "array",
-                items: { type: "string" }
-              }
-            }
-          }
-        });
+        if (!isMounted) return;
+        setSentimentData(sentiments);
+        setVerificationData(verifications);
+      } catch (error) {
+        console.error("Error generating sentiment insights:", error);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
 
-        // Save to database
-        await base44.entities.SentimentAnalysis.create({
-          article_id: article.id,
-          topic: topic,
-          overall_sentiment: result.overall_sentiment,
-          sentiment_score: result.sentiment_score,
-          confidence: result.confidence,
-          key_entities: result.key_entities || [],
-          key_topics: result.key_topics || [],
-          emotional_tone: result.emotional_tone || []
-        });
+    runAnalysis();
 
-        return { articleId: article.id, ...result };
-      });
-
-      const results = await Promise.all(analysisPromises);
-      setSentimentData(results);
-
-      // Verify claims
-      await verifyClaims();
-
-    } catch (error) {
-      console.error("Error analyzing sentiments:", error);
-    }
-    setIsLoading(false);
-  };
-
-  const verifyClaims = async () => {
-    try {
-      const claims = await base44.entities.Claim.filter({ topic }, '-created_date', 10);
-      
-      const verificationPromises = claims.map(async (claim) => {
-        const result = await base44.integrations.Core.InvokeLLM({
-          prompt: `Verify the accuracy of this claim: "${claim.claim_text}"
-
-Topic context: ${topic}
-
-Provide:
-1. Verification status (verified, partially_verified, unverified, false, misleading)
-2. Accuracy score (0-100)
-3. Evidence sources (if available from web search)
-4. Reasoning for your assessment`,
-          add_context_from_internet: true,
-          response_json_schema: {
-            type: "object",
-            properties: {
-              verification_status: { type: "string" },
-              accuracy_score: { type: "number" },
-              evidence: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    source: { type: "string" },
-                    url: { type: "string" },
-                    relevance_score: { type: "number" }
-                  }
-                }
-              },
-              ai_reasoning: { type: "string" }
-            }
-          }
-        });
-
-        await base44.entities.ClaimVerification.create({
-          claim_id: claim.id,
-          claim_text: claim.claim_text,
-          verification_status: result.verification_status,
-          accuracy_score: result.accuracy_score,
-          evidence: result.evidence || [],
-          ai_reasoning: result.ai_reasoning,
-          last_checked: new Date().toISOString()
-        });
-
-        return { claimId: claim.id, claim: claim.claim_text, ...result };
-      });
-
-      const results = await Promise.all(verificationPromises);
-      setVerificationData(results);
-
-    } catch (error) {
-      console.error("Error verifying claims:", error);
-    }
-  };
+    return () => {
+      isMounted = false;
+    };
+  }, [topic, articleKey, claimsKey, articles, claims]);
 
   const getSentimentIcon = (sentiment) => {
     switch (sentiment) {
@@ -166,6 +75,17 @@ Provide:
       case 'misleading': return <AlertTriangle className="w-5 h-5 text-orange-500" />;
       default: return <AlertTriangle className="w-5 h-5 text-gray-500" />;
     }
+  };
+
+  const getBadgeVariant = (score) => {
+    if (score > 0.3) return "default";
+    if (score < -0.3) return "destructive";
+    return "outline";
+  };
+
+  const clampToPercentage = (value) => {
+    if (Number.isNaN(value)) return 0;
+    return Math.max(0, Math.min(100, Number(value)));
   };
 
   if (isLoading) {
@@ -204,7 +124,7 @@ Provide:
             >
               <div className="flex items-start justify-between mb-3">
                 {getSentimentIcon(data.overall_sentiment)}
-                <Badge variant={data.sentiment_score > 0.3 ? "default" : data.sentiment_score < -0.3 ? "destructive" : "outline"}>
+                <Badge variant={getBadgeVariant(data.sentiment_score)}>
                   {data.overall_sentiment}
                 </Badge>
               </div>
@@ -212,9 +132,9 @@ Provide:
               <div className="mb-4">
                 <div className="flex items-center justify-between text-xs mb-1">
                   <span className="font-serif">Sentiment Score</span>
-                  <span className="font-serif font-bold">{data.sentiment_score?.toFixed(2)}</span>
+                  <span className="font-serif font-bold">{Number(data.sentiment_score || 0).toFixed(2)}</span>
                 </div>
-                <Progress value={(data.sentiment_score + 1) * 50} className="h-2" />
+                <Progress value={clampToPercentage((Number(data.sentiment_score || 0) + 1) * 50)} className="h-2" />
               </div>
 
               <div className="mb-3">
@@ -222,7 +142,7 @@ Provide:
                   <span className="font-serif">Confidence</span>
                   <span className="font-serif font-bold">{data.confidence}%</span>
                 </div>
-                <Progress value={data.confidence} className="h-2" />
+                <Progress value={clampToPercentage(data.confidence)} className="h-2" />
               </div>
 
               {data.emotional_tone && data.emotional_tone.length > 0 && (

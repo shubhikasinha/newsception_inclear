@@ -3,7 +3,8 @@ import {
   getHistoricalContext, 
   submitFactCheck, 
   voteFactCheck, 
-  getFactChecks 
+  getFactChecks, 
+  compareTopic,
 } from '../controllers/analysisController';
 import { optionalAuth } from '../middleware/auth';
 
@@ -38,5 +39,13 @@ router.post('/factcheck/:id/vote', voteFactCheck);
  * @query   claimId (required)
  */
 router.get('/factchecks', getFactChecks);
+
+/**
+ * @route   POST /api/analysis/compare
+ * @desc    Build dual-perspective analysis for a topic
+ * @access  Public
+ * @body    topic (required), location (optional), forceRefresh (optional)
+ */
+router.post('/compare', compareTopic);
 
 export default router;

@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Room, 
   RoomEvent, 
@@ -8,10 +9,14 @@ import {
   Participant,
   Track,
 } from 'livekit-client';
+import { ArrowLeft, Radio, Volume2 } from 'lucide-react';
+import Link from 'next/link';
+import DebateRequestPanel from '../components/debate/DebateRequestPanel';
 
 export default function DebatePage() {
   const [room, setRoom] = useState<Room | null>(null);
   const [joined, setJoined] = useState(false);
+  const [currentTopic, setCurrentTopic] = useState('');
   const [side, setSide] = useState<'A' | 'B' | null>(null);
   const [userId] = useState(() => `Anon-${Math.random().toString(36).slice(2, 8).toUpperCase()}`);
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -19,6 +24,7 @@ export default function DebatePage() {
   const [activeSpeakers, setActiveSpeakers] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [showVoting, setShowVoting] = useState(true);
 
   // Update participant list
   const updateParticipants = (room: Room) => {
@@ -30,15 +36,17 @@ export default function DebatePage() {
   };
 
   // Join room function
-  async function joinRoom(chosenSide: 'A' | 'B') {
+  async function joinRoom(roomId: string, topic: string, chosenSide: 'A' | 'B') {
     setIsConnecting(true);
     setError(null);
     setSide(chosenSide);
+    setCurrentTopic(topic);
+    setShowVoting(false);
 
     try {
       // Get token from API
       const res = await fetch(
-        `/api/livekit-token?user=${userId}-${chosenSide}&room=news-debate`
+        `/api/livekit-token?user=${userId}-${chosenSide}&room=${roomId}`
       );
       
       if (!res.ok) {
@@ -102,6 +110,7 @@ export default function DebatePage() {
       setError(err instanceof Error ? err.message : 'Failed to join room');
       setIsConnecting(false);
       setSide(null);
+      setShowVoting(true);
     }
   }
 
@@ -116,6 +125,8 @@ export default function DebatePage() {
     setParticipants([]);
     setActiveSpeakers(new Set());
     setIsMicEnabled(false);
+    setShowVoting(true);
+    setCurrentTopic('');
   }
 
   // Toggle microphone
@@ -159,47 +170,239 @@ export default function DebatePage() {
 
   const sideCounts = getSideCounts();
 
+  const handleJoinDebate = (roomId: string, topic: string) => {
+    // Show side selection
+    setCurrentTopic(topic);
+    setShowVoting(false);
+  };
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-linear-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-black p-4">
-      {!joined ? (
-        <div className="text-center p-8 bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-md">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">
-              🎙️ InClear Debate
-            </h1>
-            <p className="text-gray-600 dark:text-gray-300">
-              Join anonymously and pick your side
-            </p>
-          </div>
-
-          {error && (
-            <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg text-red-700 dark:text-red-300 text-sm">
-              {error}
+    <div className="min-h-screen bg-white dark:bg-[#0a0a0a] py-8 px-4">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-[#d4af37] transition-colors mb-4"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Dashboard
+          </Link>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#d4af37] to-[#b8860b] flex items-center justify-center">
+              <Radio className="w-6 h-6 text-white" />
             </div>
-          )}
-
-          <div className="space-y-3 mb-6">
-            <button
-              onClick={() => joinRoom('A')}
-              disabled={isConnecting}
-              className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white px-8 py-4 rounded-2xl shadow-lg transition-all transform hover:scale-105 disabled:scale-100 font-semibold text-lg"
-            >
-              {isConnecting && side === 'A' ? 'Joining...' : 'Side A 🔵'}
-            </button>
-            <button
-              onClick={() => joinRoom('B')}
-              disabled={isConnecting}
-              className="w-full bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white px-8 py-4 rounded-2xl shadow-lg transition-all transform hover:scale-105 disabled:scale-100 font-semibold text-lg"
-            >
-              {isConnecting && side === 'B' ? 'Joining...' : 'Side B 🔴'}
-            </button>
+            <div>
+              <h1 className="font-serif text-3xl font-bold text-gray-900 dark:text-white">
+                Live Debates
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400">
+                Twitter Spaces-style discussions on trending topics
+              </p>
+            </div>
           </div>
-
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Your ID: {userId}
-          </p>
         </div>
-      ) : (
+
+        {/* Voting Panel or Debate Room */}
+        <AnimatePresence mode="wait">
+          {showVoting && !joined ? (
+            <motion.div
+              key="voting"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <DebateRequestPanel onJoinDebate={handleJoinDebate} />
+            </motion.div>
+          ) : !joined && currentTopic ? (
+            <motion.div
+              key="side-selection"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="neomorphic p-8 rounded-xl text-center"
+            >
+              <h2 className="font-serif text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                {currentTopic}
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 mb-8">
+                Choose your side to join the debate
+              </p>
+
+              {error && (
+                <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300">
+                  {error}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => joinRoom('news-debate', currentTopic, 'A')}
+                  disabled={isConnecting}
+                  className="p-6 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl shadow-lg disabled:opacity-50 transition-all"
+                >
+                  <div className="text-4xl mb-3">🔵</div>
+                  <h3 className="font-bold text-lg mb-2">Side A - Supporting</h3>
+                  <p className="text-sm opacity-90">Join those in favor</p>
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => joinRoom('news-debate', currentTopic, 'B')}
+                  disabled={isConnecting}
+                  className="p-6 bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl shadow-lg disabled:opacity-50 transition-all"
+                >
+                  <div className="text-4xl mb-3">🔴</div>
+                  <h3 className="font-bold text-lg mb-2">Side B - Critical</h3>
+                  <p className="text-sm opacity-90">Join those opposed</p>
+                </motion.button>
+              </div>
+
+              <button
+                onClick={() => {
+                  setShowVoting(true);
+                  setCurrentTopic('');
+                }}
+                className="mt-6 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              >
+                ← Back to debates
+              </button>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="debate-room"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              {/* Active Debate Room */}
+              <div className="neomorphic rounded-xl overflow-hidden">
+                {/* Room Header */}
+                <div className="bg-gradient-to-r from-[#d4af37] to-[#b8860b] p-6 text-white">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                      <Radio className="w-4 h-4 animate-pulse" />
+                      <span className="text-sm font-medium">LIVE</span>
+                    </div>
+                    <span className="text-sm opacity-90">{participants.length} participants</span>
+                  </div>
+                  <h2 className="font-serif text-2xl font-bold mb-2">{currentTopic}</h2>
+                  <p className="opacity-90">
+                    You are <span className="font-semibold">{userId}</span> on Side {side}
+                  </p>
+                </div>
+
+                {/* Side Counts */}
+                <div className="grid grid-cols-2 gap-px bg-gray-200 dark:bg-gray-700">
+                  <div className="bg-white dark:bg-gray-800 p-4 text-center">
+                    <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                      {sideCounts.A}
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">🔵 Side A</div>
+                  </div>
+                  <div className="bg-white dark:bg-gray-800 p-4 text-center">
+                    <div className="text-3xl font-bold text-red-600 dark:text-red-400">
+                      {sideCounts.B}
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">🔴 Side B</div>
+                  </div>
+                </div>
+
+                {/* Participants List */}
+                <div className="bg-white dark:bg-gray-800 p-6 max-h-96 overflow-y-auto">
+                  <h3 className="flex items-center gap-2 text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+                    <Volume2 className="w-5 h-5 text-[#d4af37]" />
+                    Active Speakers
+                  </h3>
+                  <div className="space-y-2">
+                    {participants.map((participant) => {
+                      const participantSide = getParticipantSide(participant.identity);
+                      const isLocal = participant instanceof LocalParticipant;
+                      const isSpeaking = activeSpeakers.has(participant.identity);
+                      const isMuted = !participant.isMicrophoneEnabled;
+
+                      return (
+                        <motion.div
+                          key={participant.identity}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          className={`flex items-center justify-between p-4 rounded-xl transition-all ${
+                            isSpeaking
+                              ? 'bg-green-100 dark:bg-green-900/30 ring-2 ring-green-500'
+                              : 'bg-gray-50 dark:bg-gray-700/50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg ${
+                                participantSide === 'A' ? 'bg-blue-500' : 'bg-red-500'
+                              }`}
+                            >
+                              {participantSide}
+                            </div>
+                            <div>
+                              <div className="font-medium text-gray-900 dark:text-white">
+                                {participant.identity.replace('-A', '').replace('-B', '')}
+                                {isLocal && (
+                                  <span className="ml-2 text-xs bg-[#d4af37] text-white px-2 py-1 rounded-full">
+                                    You
+                                  </span>
+                                )}
+                              </div>
+                              {isSpeaking && (
+                                <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 font-medium mt-1">
+                                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                  Speaking...
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-2xl">
+                            {isMuted ? '�' : '🎤'}
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Controls */}
+                <div className="bg-white dark:bg-gray-800 p-6 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex justify-center gap-4">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={toggleMic}
+                      className={`px-8 py-4 rounded-xl font-semibold transition-all flex items-center gap-2 ${
+                        isMicEnabled
+                          ? 'bg-gray-800 hover:bg-gray-700 text-white'
+                          : 'bg-red-500 hover:bg-red-600 text-white'
+                      }`}
+                    >
+                      {isMicEnabled ? '🎤 Mute' : '🔇 Unmute'}
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={leaveRoom}
+                      className="bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-white px-8 py-4 rounded-xl font-semibold transition-all"
+                    >
+                      🚪 Leave Debate
+                    </motion.button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
         <div className="w-full max-w-2xl">
           {/* Header */}
           <div className="text-center bg-white dark:bg-gray-800 p-6 rounded-t-3xl shadow-lg">
