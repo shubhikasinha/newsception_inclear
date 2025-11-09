@@ -6,12 +6,13 @@ import DebateParticipant from '../models/DebateParticipant';
 import DebateModeration from '../models/DebateModeration';
 import livekitService from '../services/livekitService';
 import Article from '../models/Article';
+import { generateAnonId, generateRoomId, generateSessionId } from '../utils/idGenerator';
 
 const DEBATE_THRESHOLD = 5;
 
 export const requestDebate = asyncHandler(async (req: Request, res: Response) => {
   const { topic, articleId, side } = req.body;
-  const userId = req.auth?.sub || `anon-${Date.now()}`;
+  const userId = req.auth?.sub || generateAnonId();
 
   if (!topic) {
     throw new CustomError('Topic is required', 400);
@@ -42,7 +43,7 @@ export const requestDebate = asyncHandler(async (req: Request, res: Response) =>
     const opposeArticle = await Article.findOne({ topic, perspective: 'oppose' });
 
     // Create debate room
-    const roomName = `debate-${topic.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
+    const roomName = generateRoomId(topic);
     const room = await DebateRoom.create({
       topic,
       articleId,
@@ -98,7 +99,7 @@ export const getDebateRequests = asyncHandler(async (req: Request, res: Response
 export const joinDebateRoom = asyncHandler(async (req: Request, res: Response) => {
   const { roomId } = req.params;
   const { side } = req.body;
-  const userId = req.auth?.sub || `anon-${Date.now()}`;
+  const userId = req.auth?.sub || generateAnonId();
 
   if (!side || !['A', 'B'].includes(side)) {
     throw new CustomError('Valid side (A or B) is required', 400);

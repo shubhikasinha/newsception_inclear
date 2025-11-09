@@ -5,9 +5,10 @@ const nextConfig = {
   images: {
     domains: ['localhost'],
   },
-  experimental: {
-    turbopack: true,
-  }
+  env: {
+    BACKEND_URL: process.env.BACKEND_URL || 'http://localhost:5000',
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000',
+  },
 };
 
 module.exports = nextConfig;

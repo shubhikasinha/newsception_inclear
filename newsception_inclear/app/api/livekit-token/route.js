@@ -1,12 +1,12 @@
-// app/api/livekit-token/route.ts
 import { NextResponse } from 'next/server';
 import { AccessToken } from 'livekit-server-sdk';
 
-export async function GET(req: Request) {
+export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
     const user = searchParams.get('user') || 'Anonymous';
     const room = searchParams.get('room') || 'default-room';
+    const canPublish = searchParams.get('canPublish') !== 'false';
 
     // Validate environment variables
     if (!process.env.LIVEKIT_API_KEY || !process.env.LIVEKIT_API_SECRET) {
@@ -23,11 +23,13 @@ export async function GET(req: Request) {
       { identity: user }
     );
 
-    // Grant permissions to join room and publish audio
+    // Grant permissions
+    // Viewers can subscribe but not publish
+    // Participants can both subscribe and publish
     at.addGrant({ 
       roomJoin: true, 
       room,
-      canPublish: true,
+      canPublish: canPublish,
       canSubscribe: true,
     });
 
@@ -42,3 +44,4 @@ export async function GET(req: Request) {
     );
   }
 }
+
