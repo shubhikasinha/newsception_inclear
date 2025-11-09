@@ -1,0 +1,13 @@
+tensorflow
+torch
+transformers
+datasets
+numpy
+nltk
+scikit-learn
+sentencepiece
+evaluate
+fastapi
+tf-keras
+pydantic
+uvicorn

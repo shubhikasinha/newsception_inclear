@@ -1,3 +1,6 @@
+#python virtual environment
+venv
+
 # Node dependencies
 node_modules/
 newsception_inclear/node_modules/
@@ -36,3 +39,4 @@ newsception_inclear/.vercel
 *.tsbuildinfo
 newsception_inclear/*.tsbuildinfo
 newsception_inclear/next-env.d.ts
+>>>>>>> 115cb83b0c5eb5c9e57dc9050e73fdbe0e1ad543
