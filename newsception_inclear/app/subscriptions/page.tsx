@@ -191,8 +191,7 @@ export default function Subscriptions() {
           <h1 className="font-serif font-bold text-4xl md:text-5xl text-[#1a1a1a] dark:text-white mb-4">
             Subscription Center
           </h1>
-          <div className="w-24 h-0.5 bg-linear-to-r from-transparent via-[#d4af37] to-transparent mx-auto mb-6" />
-          <p className="font-sans text-lg text-gray-600 dark:text-gray-400">
+          <div className="w-24 h-0.5 bg-gradient-to-r from-transparent via-[#d4af37] to-transparent mx-auto mb-6" />          <p className="font-sans text-lg text-gray-600 dark:text-gray-400">
             Get personalized news summaries delivered your way
           </p>
         </motion.div>
@@ -210,12 +209,12 @@ export default function Subscriptions() {
               Your Active Subscriptions
             </h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {userSubscriptions.map((sub: any, index: number) => {
+              {userSubscriptions.map((sub: any) => {
                 const subType = subscriptionTypes.find(t => t.type === sub.subscription_type);
                 return (
                   <div
-                    key={index}
-                    className="bg-white dark:bg-[#1a1a1a] border-2 border-gray-200 dark:border-gray-800 rounded-2xl p-6"
+                    key={sub.id}
+                    className="neomorphic p-6 rounded-xl hover:shadow-lg transition-shadow"
                   >
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
@@ -276,8 +275,7 @@ export default function Subscriptions() {
                   onClick={() => setSelectedType(sub.type)}
                 >
                   {/* Icon */}
-                  <div className={`w-16 h-16 rounded-2xl bg-linear-to-br ${sub.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                    <sub.icon className="w-8 h-8 text-white" />
+                  <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${sub.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>                    <sub.icon className="w-8 h-8 text-white" />
                   </div>
 
                   {/* Title */}

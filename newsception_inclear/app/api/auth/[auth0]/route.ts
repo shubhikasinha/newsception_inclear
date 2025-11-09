@@ -28,6 +28,10 @@ export async function GET(
         return NextResponse.redirect(new URL('/dashboard', request.url));
       case 'logout':
         return NextResponse.redirect(new URL('/', request.url));
+      case 'callback':
+        const callbackResponse = NextResponse.redirect(new URL('/dashboard', request.url));
+        callbackResponse.cookies.set('dev-auth', 'true', { httpOnly: true });
+        return callbackResponse;
       case 'me':
         return NextResponse.json({
           sub: 'dev-user',
@@ -35,8 +39,7 @@ export async function GET(
           email: 'dev@newsception.app',
         });
       default:
-        return NextResponse.json({ error: 'Unknown auth route' }, { status: 404 });
-    }
+        return NextResponse.json({ error: 'Unknown auth route' }, { status: 404 });    }
   }
 
   // Production: Implement full Auth0 flow when SDK is compatible

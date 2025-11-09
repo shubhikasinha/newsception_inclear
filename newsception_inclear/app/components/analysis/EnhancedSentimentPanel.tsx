@@ -130,8 +130,7 @@ export default function EnhancedSentimentPanel({
     return () => {
       isMounted = false;
     };
-  }, [topic, articles, claims, articleKey, claimsKey]);
-
+  }, [topic, articleKey, claimsKey]);
   if (isLoading) {
     return (
       <div className="bg-white dark:bg-[#1a1a1a] border-2 border-[#1a1a1a] dark:border-[#333] p-8 text-center">
@@ -274,17 +273,22 @@ export default function EnhancedSentimentPanel({
                   <p className="font-serif text-xs font-semibold mb-1">Evidence:</p>
                   <div className="space-y-1">
                     {data.evidence.slice(0, 2).map((ev, evidenceIndex) => (
-                      <a
-                        key={`${ev.source}-${evidenceIndex}`}
-                        href={ev.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block text-xs text-[#d4af37] hover:underline"
-                      >
-                        • {ev.source}
-                      </a>
-                    ))}
-                  </div>
+                      ev.url ? (
+                        <a
+                          key={`${ev.source}-${evidenceIndex}`}
+                          href={ev.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block text-xs text-[#d4af37] hover:underline"
+                        >
+                          • {ev.source}
+                        </a>
+                      ) : (
+                        <span key={`${ev.source}-${evidenceIndex}`} className="block text-xs text-gray-500">
+                          • {ev.source} (no link)
+                        </span>
+                      )
+                    ))}                  </div>
                 </div>
               )}
             </motion.div>

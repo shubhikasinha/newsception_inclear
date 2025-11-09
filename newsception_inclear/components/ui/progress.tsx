@@ -19,10 +19,19 @@ export function Progress({
   const ratio = safeMax === 0 ? 0 : clampedValue / safeMax;
   const activeSegments = Math.round(ratio * segments);
 
-  const ariaValueNow = Math.round(ratio * 100);
+  const ariaAttrs = {
+    role: "progressbar",
+    "aria-valuenow": Math.round(ratio * 100),
+    "aria-valuemin": 0,
+    "aria-valuemax": safeMax,
+  };
 
   return (
-    <div role="progressbar" className={cn("flex w-full items-center gap-0.5", className)} {...props}>
+    <div
+      {...ariaAttrs}
+      className={cn("flex w-full items-center gap-0.5", className)}
+      {...props}
+    >
       {Array.from({ length: segments }).map((_, index) => (
         <span
           key={index}

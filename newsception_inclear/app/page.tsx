@@ -42,12 +42,12 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             {/* Decorative Line */}
-            <div className="w-24 h-0.5 bg-linear-to-r from-transparent via-[#d4af37] to-transparent mx-auto mb-8" />
+            <div className="w-24 h-0.5 bg-gradient-to-r from-transparent via-[#d4af37] to-transparent mx-auto mb-8" />
 
             <h1 className="font-serif font-bold text-5xl md:text-7xl lg:text-8xl text-[#1a1a1a] dark:text-white mb-6 tracking-tight">
               The Truth Has
               <br />
-              <span className="bg-linear-to-r from-[#d4af37] to-[#b8860b] bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-[#d4af37] to-[#b8860b] bg-clip-text text-transparent">
                 Two Sides
               </span>
             </h1>

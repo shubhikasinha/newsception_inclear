@@ -17,8 +17,7 @@ const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(
               variant === "default",
             "border-transparent bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100":
               variant === "secondary",
-            "text-gray-900 dark:text-gray-100": variant === "outline",
-            "border-transparent bg-red-500 text-white": variant === "destructive",
+            "border-gray-300 text-gray-900 dark:border-gray-700 dark:text-gray-100": variant === "outline",            "border-transparent bg-red-500 text-white": variant === "destructive",
           },
           className
         )}

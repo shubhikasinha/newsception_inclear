@@ -31,6 +31,7 @@ export default function DebateRequestPanel({ onJoinDebate }: DebateRequestPanelP
   const [isLoading, setIsLoading] = useState(false);
   const [votedTopics, setVotedTopics] = useState<Set<string>>(new Set());
   const [showRequestForm, setShowRequestForm] = useState(false);
+  const [voteErrors, setVoteErrors] = useState<Record<string, string | undefined>>({});
 
   useEffect(() => {
     if (searchTopic) {
@@ -67,7 +68,7 @@ export default function DebateRequestPanel({ onJoinDebate }: DebateRequestPanelP
 
     try {
       // Call API to vote
-      // await apiClient.voteDebateRequest(requestId);
+      await apiClient.voteDebateRequest(requestId);
       
       // Update local state
       setRequests(prev =>
@@ -78,24 +79,41 @@ export default function DebateRequestPanel({ onJoinDebate }: DebateRequestPanelP
         )
       );
       setVotedTopics(prev => new Set(prev).add(requestId));
+      // Clear any prior error for this request
+      setVoteErrors(prev => {
+        const copy = { ...prev };
+        delete copy[requestId];
+        return copy;
+      });
     } catch (error) {
+      // Keep the console log for diagnostics
       console.error('Error voting:', error);
+      // Surface a user-facing error and allow retry
+      setVoteErrors(prev => ({
+        ...prev,
+        [requestId]: 'Vote failed, please try again',
+      }));
     }
   };
 
+  const retryVote = (requestId: string, topic: string) => {
+    // Clear message then attempt vote again
+    setVoteErrors(prev => ({ ...prev, [requestId]: undefined }));
+    void handleVote(requestId, topic);
+  };
   const handleRequestDebate = async (topic: string) => {
     try {
       setIsLoading(true);
-      // await apiClient.requestDebate({ topic });
+      await apiClient.requestDebate({ topic });
       await loadDebateRequests(topic);
       setShowRequestForm(false);
     } catch (error) {
       console.error('Error requesting debate:', error);
+      alert('Failed to request debate. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
-
   const getVoteProgress = (voteCount: number) => {
     return Math.min((voteCount / 5) * 100, 100);
   };
@@ -129,8 +147,7 @@ export default function DebateRequestPanel({ onJoinDebate }: DebateRequestPanelP
                 animate={{ opacity: 1 }}
                 className="neomorphic p-6 rounded-xl text-center"
               >
-                <div className="animate-spin w-8 h-8 border-3 border-[#d4af37] border-t-transparent rounded-full mx-auto mb-3"></div>
-                <p className="text-gray-600 dark:text-gray-400">Loading debates...</p>
+                <div className="animate-spin w-8 h-8 border-4 border-[#d4af37] border-t-transparent rounded-full mx-auto mb-3"></div>                <p className="text-gray-600 dark:text-gray-400">Loading debates...</p>
               </motion.div>
             ) : requests.length > 0 ? (
               requests.map((request, index) => {
@@ -181,6 +198,19 @@ export default function DebateRequestPanel({ onJoinDebate }: DebateRequestPanelP
                         </div>
                       </div>
                     </div>
+
+                    {/* Vote error message + retry */}
+                    {voteErrors[request._id] && (
+                      <div className="mt-3 flex items-center gap-3 text-sm">
+                        <p className="text-red-600 dark:text-red-400">{voteErrors[request._id]}</p>
+                        <button
+                          onClick={() => retryVote(request._id, request.topic)}
+                          className="px-3 py-1 text-sm bg-transparent underline text-blue-600 dark:text-blue-400"
+                        >
+                          Retry
+                        </button>
+                      </div>
+                    )}
 
                     {/* Vote Progress Bar */}
                     <div className="mb-4">

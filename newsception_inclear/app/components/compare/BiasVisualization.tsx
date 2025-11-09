@@ -37,10 +37,9 @@ export default function BiasVisualization({ topic, articles = [] }: BiasVisualiz
   const [isLoading, setIsLoading] = useState(true);
 
   const articleKey = useMemo(
-    () => articles.map((article) => article?.id || article?.title || "unknown").join("|"),
+    () => articles.map((article, idx) => article?.id || article?.title || `unknown-${idx}`).join("|"),
     [articles]
   );
-
   useEffect(() => {
     let isMounted = true;
     setIsLoading(true);
@@ -91,7 +90,7 @@ export default function BiasVisualization({ topic, articles = [] }: BiasVisualiz
       className="bg-white dark:bg-[#1a1a1a] border-2 border-[#1a1a1a] dark:border-[#333] p-6 md:p-8"
     >
       <div className="flex items-start gap-4 mb-6">
-  <div className="w-12 h-12 border-2 border-orange-500 flex items-center justify-center shrink-0">
+        <div className="w-12 h-12 border-2 border-orange-500 flex items-center justify-center shrink-0">
           <Shield className="w-6 h-6 text-orange-500" />
         </div>
         <div className="flex-1">
@@ -114,7 +113,7 @@ export default function BiasVisualization({ topic, articles = [] }: BiasVisualiz
           <span>Heavily Right</span>
         </div>
         <div className="relative h-8 rounded-full overflow-hidden border-2 border-[#1a1a1a] dark:border-white">
-          <div className="absolute inset-0 bg-linear-to-r from-blue-700 via-gray-300 to-red-700" />
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-700 via-gray-300 to-red-700" />
           <motion.div
             initial={{ left: "50%" }}
             animate={{ left: `${((normalizedScore + 100) / 200) * 100}%` }}
@@ -122,7 +121,7 @@ export default function BiasVisualization({ topic, articles = [] }: BiasVisualiz
             className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-10 bg-[#1a1a1a] dark:bg-white border-2 border-[#d4af37]"
           />
         </div>
-        <p className="text-center mt-2 font-serif text-sm">
+        <p className="mt-3 text-center text-sm text-gray-600 dark:text-gray-400">
           Bias Score: <span className="font-bold">{normalizedScore}</span>
         </p>
       </div>

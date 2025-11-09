@@ -53,13 +53,14 @@ export const disconnectRedis = async (): Promise<void> => {
   }
 };
 
-// Cache helper functions
+// Cache helper functions (gracefully handle missing Redis)
 export const cacheGet = async (key: string): Promise<string | null> => {
   try {
+    if (!redisClient) return null;
     const client = getRedisClient();
     return await client.get(key);
   } catch (error) {
-    logger.error('Cache get error:', error);
+    logger.debug('Cache get error (non-critical):', error);
     return null;
   }
 };
@@ -70,6 +71,7 @@ export const cacheSet = async (
   ttl?: number
 ): Promise<void> => {
   try {
+    if (!redisClient) return;
     const client = getRedisClient();
     if (ttl) {
       await client.setex(key, ttl, value);
@@ -77,26 +79,28 @@ export const cacheSet = async (
       await client.set(key, value);
     }
   } catch (error) {
-    logger.error('Cache set error:', error);
+    logger.debug('Cache set error (non-critical):', error);
   }
 };
 
 export const cacheDel = async (key: string): Promise<void> => {
   try {
+    if (!redisClient) return;
     const client = getRedisClient();
     await client.del(key);
   } catch (error) {
-    logger.error('Cache delete error:', error);
+    logger.debug('Cache delete error (non-critical):', error);
   }
 };
 
 export const cacheExists = async (key: string): Promise<boolean> => {
   try {
+    if (!redisClient) return false;
     const client = getRedisClient();
     const exists = await client.exists(key);
     return exists === 1;
   } catch (error) {
-    logger.error('Cache exists error:', error);
+    logger.debug('Cache exists error (non-critical):', error);
     return false;
   }
 };

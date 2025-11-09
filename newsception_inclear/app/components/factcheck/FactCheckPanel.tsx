@@ -75,8 +75,7 @@ export default function FactCheckPanel({
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const claimKey = useMemo(() => claims.map((claim) => claim.claim_text).join("|"), [claims]);
-
+  const claimKey = useMemo(() => JSON.stringify(claims.map((claim) => claim.claim_text || "")), [claims]);
   useEffect(() => {
     if (!claims.length) {
       setVerifications([]);
@@ -126,6 +125,7 @@ export default function FactCheckPanel({
                   : `claim-${index}`
                 : `claim-${index}-${Date.now()}`,
               claim: claim.claim_text || claim.claim_type || "Unknown claim",
+              reasoning: "Failed to verify this claim. Please try refreshing or check back later.",
             }))
           );
         }
@@ -237,24 +237,8 @@ export default function FactCheckPanel({
                 </p>
 
                 {hasSources && (
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {sources.slice(0, 6).map((source, index) => (
-                      <a
-                        key={`${verification.id}-src-${index}`}
-                        href={source.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs font-serif text-blue-600 dark:text-blue-400 hover:underline"
-                      >
-                        Source {index + 1}
-                      </a>
-                    ))}
-                  </div>
-                )}
-
-                {hasSources && (
                   <div className="flex flex-wrap gap-2 mt-2">
-                    {sources.map((source, sourceIndex) => (
+                    {sources.slice(0, 6).map((source, sourceIndex) => (
                       <Badge
                         key={`${verification.id}-badge-${sourceIndex}`}
                         variant="outline"

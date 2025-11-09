@@ -33,6 +33,7 @@ export const searchNews = asyncHandler(async (req: Request, res: Response) => {
 
   const supportArticles = analysis.groups.support;
   const opposeArticles = analysis.groups.oppose;
+  const neutral = analysis.groups?.neutral || [];
 
   const responsePayload = {
     topic: analysis.topic,
@@ -50,9 +51,9 @@ export const searchNews = asyncHandler(async (req: Request, res: Response) => {
         count: opposeArticles.length,
       },
       neutral: {
-        label: analysis.groups.neutral[0]?.stance || `Neutral coverage of ${analysis.topic}`,
-        articles: analysis.groups.neutral,
-        count: analysis.groups.neutral.length,
+        label: neutral[0]?.stance || `Neutral coverage of ${analysis.topic}`,
+        articles: neutral,
+        count: neutral.length,
       },
     },
     totalSources: analysis.articles.length,

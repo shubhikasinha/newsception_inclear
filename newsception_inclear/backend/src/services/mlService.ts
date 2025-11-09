@@ -55,17 +55,88 @@ class MLService {
       'X-Title': 'Newsception Analysis',
     };
 
-    const response = await axios.post(`${this.openRouterBaseUrl}/chat/completions`, payload, {
-      headers,
-      timeout: 45000,
-    });
+    // NOTE: This call can be slow and potentially flaky. Prefer running off the main
+    // request path (queued job, worker, or background task) to avoid blocking user requests.
 
-    const content = response.data?.choices?.[0]?.message?.content;
-    if (!content) {
-      throw new Error('Empty response from language model');
+    const timeoutMs = Number(process.env.OPENROUTER_TIMEOUT_MS || '15000');
+    const maxAttempts = Number(process.env.OPENROUTER_RETRIES || '3');
+
+    const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
+
+    let lastErr: any = null;
+    const truncatedPayload = (() => {
+      try {
+        const s = JSON.stringify(payload);
+        return s.length > 1000 ? s.slice(0, 1000) + '...' : s;
+      } catch (e) {
+        return '[unserializable-payload]';
+      }
+    })();
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        logger.info(`OpenRouter request attempt=${attempt} site=${this.siteUrl} model=${this.openRouterModel}`);
+        const response = await axios.post(`${this.openRouterBaseUrl}/chat/completions`, payload, {
+          headers,
+          timeout: timeoutMs,
+          validateStatus: (status) => status >= 200 && status < 500, // treat 5xx as errors we can inspect
+        });
+
+        // If response indicates server error, throw to trigger retry logic
+        const status = response.status;
+        if (status >= 500 || status === 429) {
+          const err = new Error(`OpenRouter returned status ${status}`);
+          (err as any).response = response;
+          throw err;
+        }
+
+        const content = response.data?.choices?.[0]?.message?.content;
+        if (!content) {
+          throw new Error('Empty response from language model');
+        }
+
+        return content;
+      } catch (err: any) {
+        lastErr = err;
+
+        // Log contextual details for diagnostics (but avoid logging full payloads)
+        try {
+          logger.error('OpenRouter request failed', {
+            attempt,
+            siteUrl: this.siteUrl,
+            model: this.openRouterModel,
+            baseUrl: this.openRouterBaseUrl,
+            truncatedPayload: typeof truncatedPayload === 'string' ? truncatedPayload.slice(0, 1000) : truncatedPayload,
+            headers: { Authorization: headers.Authorization, 'Content-Type': headers['Content-Type'] },
+            errorMessage: err?.message,
+            status: err?.response?.status,
+            responseDataSnippet: err?.response?.data ? JSON.stringify(err.response.data).slice(0, 1000) : undefined,
+          });
+        } catch (logErr) {
+          // swallow logging errors
+          console.error('Failed to log OpenRouter error', logErr);
+        }
+
+        // Determine if we should retry: network errors (no response), 5xx, or 429
+        const status = err?.response?.status;
+        const isTransient = !err?.response || status === 429 || (status >= 500 && status < 600);
+
+        if (attempt < maxAttempts && isTransient) {
+          const backoffMs = Math.floor(500 * Math.pow(2, attempt - 1));
+          // jitter +/- 100ms
+          const jitter = Math.floor(Math.random() * 200) - 100;
+          await sleep(backoffMs + jitter);
+          continue;
+        }
+
+        // No more retries or non-transient error - break and throw after loop
+      }
     }
 
-    return content;
+    // After exhausting retries, throw a clear contextual error
+    const finalMessage = `OpenRouter call failed after ${maxAttempts} attempts: ${lastErr?.message || 'unknown error'}`;
+    logger.error(finalMessage, { lastError: lastErr });
+    throw new Error(finalMessage);
   }
 
   async analyzeArticles(articles: any[], topic: string): Promise<AnalysisResult[]> {
@@ -130,7 +201,16 @@ class MLService {
       };
 
       const content = await this.callOpenRouter(payload);
-      const parsed = JSON.parse(content);
+      
+      // Remove markdown code blocks if present
+      let cleanedContent = content.trim();
+      if (cleanedContent.startsWith('```json')) {
+        cleanedContent = cleanedContent.replace(/^```json\n?/, '').replace(/\n?```$/, '');
+      } else if (cleanedContent.startsWith('```')) {
+        cleanedContent = cleanedContent.replace(/^```\n?/, '').replace(/\n?```$/, '');
+      }
+      
+      const parsed = JSON.parse(cleanedContent);
 
       if (!Array.isArray(parsed?.analyses)) {
         throw new Error('Unexpected OpenRouter response format');

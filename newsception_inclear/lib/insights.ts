@@ -182,7 +182,18 @@ export async function generateSentimentInsights(topic: string, articles: Article
 
   return payload.articles.map((article) => {
     const text = safeText(collectArticleText(article));
-    const { score, sentiment, tones, entities, topics } = computeSentimentScore(text || topic.toLowerCase());
+    if (!text) {
+      return {
+        articleId: article.id,
+        overall_sentiment: "neutral" as const,
+        sentiment_score: 0,
+        confidence: 50,
+        key_entities: [],
+        key_topics: [],
+        emotional_tone: [],
+      };
+    }
+    const { score, sentiment, tones, entities, topics } = computeSentimentScore(text);
     const lengthBonus = clamp(text.length / 120, 0, 25);
     const confidence = clamp(62 + Math.abs(score) * 18 + lengthBonus, 55, 96);
 
@@ -195,8 +206,7 @@ export async function generateSentimentInsights(topic: string, articles: Article
       key_topics: topics,
       emotional_tone: tones,
     };
-  });
-}
+  });}
 
 export async function generateClaimVerifications(topic: string, claims: ClaimLike[]): Promise<ClaimVerificationInsight[]> {
   if (!claims || claims.length === 0) {
@@ -238,14 +248,7 @@ export async function generateClaimVerifications(topic: string, claims: ClaimLik
       clamp(roll * 100 + (claim.confidence_score || 0) / 5, 35, 95)
     );
 
-    const evidenceSources = Array.from({ length: 2 }).map((_, evidenceIndex) => {
-      const keyword = claim.claim_text.split(" ")[evidenceIndex] || `evidence-${evidenceIndex}`;
-      return {
-        source: `${keyword.replace(/[^a-z0-9]/gi, "").toUpperCase()} Weekly`,
-        url: `https://news.example.com/${encodeURIComponent(keyword.toLowerCase())}`,
-      };
-    });
-
+    const evidenceSources: Array<{ source: string; url: string }> = [];
     return {
       claimId: `claim-${index}`,
       claim: claim.claim_text,

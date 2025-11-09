@@ -131,8 +131,7 @@ function FeedbackContent() {
           <h1 className="font-serif font-bold text-4xl md:text-5xl text-[#1a1a1a] dark:text-white mb-4">
             Share Your Feedback
           </h1>
-          <div className="w-24 h-0.5 bg-linear-to-r from-transparent via-[#d4af37] to-transparent mx-auto mb-6" />
-          <p className="font-sans text-lg text-gray-600 dark:text-gray-400">
+          <div className="w-24 h-0.5 bg-gradient-to-r from-transparent via-[#d4af37] to-transparent mx-auto mb-6" />          <p className="font-sans text-lg text-gray-600 dark:text-gray-400">
             Help us improve InClear by sharing your experience
           </p>
           {topic && (

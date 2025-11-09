@@ -12,30 +12,26 @@ interface NewsArticle {
 }
 
 export class NewsService {
-  private googleApiKey: string;
-  private bingApiKey: string;
+  private newsApiKey: string;
 
   constructor() {
-    this.googleApiKey = process.env.GOOGLE_NEWS_API_KEY || '';
-    this.bingApiKey = process.env.BING_NEWS_API_KEY || '';
+    this.newsApiKey = process.env.GOOGLE_NEWS_API_KEY || '';
   }
 
   async fetchNews(topic: string, location?: string): Promise<NewsArticle[]> {
     try {
-      // Try Google News API first
-      if (this.googleApiKey) {
-        const articles = await this.fetchFromGoogle(topic, location);
-        if (articles.length > 0) return articles;
+      // Use NewsAPI.org with the configured key
+      if (this.newsApiKey) {
+        logger.info(`Fetching real news for topic: ${topic}`);
+        const articles = await this.fetchFromNewsAPI(topic, location);
+        if (articles.length > 0) {
+          logger.info(`Successfully fetched ${articles.length} articles from NewsAPI`);
+          return articles;
+        }
       }
 
-      // Fallback to Bing News API
-      if (this.bingApiKey) {
-        const articles = await this.fetchFromBing(topic, location);
-        if (articles.length > 0) return articles;
-      }
-
-      // If no API keys or both failed, return mock data
-      logger.warn('No news API configured, returning mock data');
+      // If no API key or fetch failed, return mock data as fallback
+      logger.warn('NewsAPI not available or no results, returning mock data');
       return this.getMockNews(topic);
 
     } catch (error) {
@@ -44,62 +40,89 @@ export class NewsService {
     }
   }
 
-  private async fetchFromGoogle(topic: string, _location?: string): Promise<NewsArticle[]> {
+  private async fetchFromNewsAPI(topic: string, _location?: string): Promise<NewsArticle[]> {
     try {
-      const url = 'https://newsapi.org/v2/everything';
-      const params = {
+      // Try "everything" endpoint first for comprehensive results
+      let url = 'https://newsapi.org/v2/everything';
+      let params: any = {
         q: topic,
-        apiKey: this.googleApiKey,
+        apiKey: this.newsApiKey,
         language: 'en',
         sortBy: 'relevancy',
+        pageSize: 30,
+        // Get articles from last 7 days for relevancy
+        from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+
+      logger.info(`Calling NewsAPI: ${url} with query: ${topic}`);
+      let response = await axios.get(url, { params, timeout: 10000 });
+      
+      if (response.data.status === 'ok' && response.data.articles && response.data.articles.length > 0) {
+        logger.info(`NewsAPI returned ${response.data.articles.length} articles`);
+        
+        const articles = response.data.articles
+          .filter((article: any) => 
+            article.title && 
+            article.url && 
+            article.title !== '[Removed]' &&
+            article.description !== '[Removed]'
+          )
+          .map((article: any) => ({
+            title: article.title,
+            url: article.url,
+            source: article.source.name,
+            description: article.description || article.content || '',
+            publishedAt: article.publishedAt,
+            imageUrl: article.urlToImage,
+            author: article.author,
+          }));
+
+        if (articles.length > 0) {
+          return articles;
+        }
+      }
+
+      // Fallback to "top-headlines" if everything endpoint gives no results
+      logger.info('Trying top-headlines endpoint as fallback');
+      url = 'https://newsapi.org/v2/top-headlines';
+      params = {
+        q: topic,
+        apiKey: this.newsApiKey,
+        language: 'en',
         pageSize: 20,
       };
 
-      const response = await axios.get(url, { params });
+      response = await axios.get(url, { params, timeout: 10000 });
       
-      return response.data.articles.map((article: any) => ({
-        title: article.title,
-        url: article.url,
-        source: article.source.name,
-        description: article.description || article.content,
-        publishedAt: article.publishedAt,
-        imageUrl: article.urlToImage,
-        author: article.author,
-      }));
+      if (response.data.status === 'ok' && response.data.articles) {
+        const articles = response.data.articles
+          .filter((article: any) => 
+            article.title && 
+            article.url &&
+            article.title !== '[Removed]'
+          )
+          .map((article: any) => ({
+            title: article.title,
+            url: article.url,
+            source: article.source.name,
+            description: article.description || article.content || '',
+            publishedAt: article.publishedAt,
+            imageUrl: article.urlToImage,
+            author: article.author,
+          }));
 
-    } catch (error) {
-      logger.error('Google News API error:', error);
+        return articles;
+      }
+
+      logger.warn('NewsAPI returned no valid articles');
       return [];
-    }
-  }
 
-  private async fetchFromBing(topic: string, _location?: string): Promise<NewsArticle[]> {
-    try {
-      const url = 'https://api.bing.microsoft.com/v7.0/news/search';
-      const headers = {
-        'Ocp-Apim-Subscription-Key': this.bingApiKey,
-      };
-      const params = {
-        q: topic,
-        count: 20,
-        mkt: 'en-US',
-        freshness: 'Week',
-      };
-
-      const response = await axios.get(url, { headers, params });
-      
-      return response.data.value.map((article: any) => ({
-        title: article.name,
-        url: article.url,
-        source: article.provider[0]?.name || 'Unknown',
-        description: article.description,
-        publishedAt: article.datePublished,
-        imageUrl: article.image?.thumbnail?.contentUrl,
-        author: undefined,
-      }));
-
-    } catch (error) {
-      logger.error('Bing News API error:', error);
+    } catch (error: any) {
+      logger.error('NewsAPI error:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
       return [];
     }
   }

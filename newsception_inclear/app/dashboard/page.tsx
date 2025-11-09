@@ -6,7 +6,7 @@ import { Search, Loader2, MapPin, Clock } from "lucide-react";
 
 import NewsFeedCard from "../components/dashboard/NewsFeedCard";
 import LocationTrendingBar from "../components/dashboard/LocationTrendingBar";
-import LoadingState from "../components/shared/LoadingState";
+import { LoadingState } from "../components/shared/LoadingStates";
 import { apiClient } from "@/lib/api-client";
 
 function DashboardSuspenseFallback() {
@@ -52,24 +52,29 @@ function DashboardContent() {
       { threshold: 0.1 }
     );
 
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
+    const currentTarget = observerTarget.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
     }
 
     return () => {
-      if (observerTarget.current) {
-        observer.unobserve(observerTarget.current);
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
       }
     };
-  }, [hasMore, isLoading, page]);
-
+  }, [hasMore, isLoading]);
   const getUserLocation = async () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           try {
             const response = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?lat=${position.coords.latitude}&lon=${position.coords.longitude}&format=json`
+              `https://nominatim.openstreetmap.org/reverse?lat=${position.coords.latitude}&lon=${position.coords.longitude}&format=json`,
+              {
+                headers: {
+                  'User-Agent': 'YourAppName/1.0 (contact@yourdomain.com)'
+                }
+              }
             );
             const data = await response.json();
             setUserLocation({
@@ -90,83 +95,51 @@ function DashboardContent() {
       setUserLocation({ city: 'Global', country: 'World' });
     }
   };
-
   const loadInitialFeed = async () => {
     setIsLoading(true);
     try {
-      // Mock data for now - replace with actual API call when backend is ready
-      const mockFeedItems = [
-        {
-          headline: "Global Climate Summit Reaches Historic Agreement on Carbon Emissions",
-          summary: "World leaders from 195 countries have agreed to unprecedented carbon reduction targets. The agreement includes binding commitments and a $100 billion fund for developing nations.",
-          topic: "Environment",
-          source_count: 18,
-          trending_score: 95,
-          perspectives: {
-            count: 4,
-            categories: ["Policy Impact", "Economic Implications", "Scientific Analysis", "Developing Nations"]
-          }
-        },
-        {
-          headline: "Major Tech Companies Announce AI Safety Coalition",
-          summary: "Leading technology firms have formed a coalition to establish ethical guidelines for AI development. The initiative aims to ensure responsible innovation while maintaining competitive advantage.",
-          topic: "Technology",
-          source_count: 15,
-          trending_score: 88,
-          perspectives: {
-            count: 4,
-            categories: ["Industry Standards", "Regulatory Concerns", "Innovation Impact", "Public Trust"]
-          }
-        },
-        {
-          headline: "Healthcare Reform Proposal Sparks National Debate",
-          summary: "A comprehensive healthcare reform bill has been introduced, promising universal coverage. The proposal has generated intense discussion about costs, access, and quality of care.",
-          topic: "Healthcare",
-          source_count: 12,
-          trending_score: 82,
-          perspectives: {
-            count: 3,
-            categories: ["Cost Analysis", "Access Equity", "Quality Standards"]
-          }
-        },
-        {
-          headline: "Economic Recovery Shows Mixed Signals Across Global Markets",
-          summary: "While some sectors show robust growth, others struggle with persistent challenges. Economists debate whether current policies are sufficient for sustained recovery.",
-          topic: "Economy",
-          source_count: 14,
-          trending_score: 79,
-          perspectives: {
-            count: 4,
-            categories: ["Growth Indicators", "Policy Effectiveness", "Market Volatility", "Employment Trends"]
-          }
-        },
-        {
-          headline: "Education Technology Transforms Traditional Learning Models",
-          summary: "Schools worldwide are adopting hybrid learning approaches combining digital and in-person instruction. The shift raises questions about educational equity and effectiveness.",
-          topic: "Education",
-          source_count: 10,
-          trending_score: 75,
-          perspectives: {
-            count: 3,
-            categories: ["Learning Outcomes", "Digital Divide", "Teacher Adaptation"]
-          }
-        }
-      ];
-
-      setFeedItems(mockFeedItems);
+      // Try to fetch real data from backend first
+      const response = await apiClient.getNewsFeed({ page: 1, limit: 20 });
       
-      // Try to fetch from backend when available
-      try {
-        const news = await apiClient.getNewsFeed({ page: 1, limit: 20 });
-        if (news && Array.isArray(news)) {
-          setFeedItems(news);
-        }
-      } catch (error) {
-        console.log("Backend not available, using mock data");
+      if (response && response.feed && Array.isArray(response.feed)) {
+        console.log('Successfully loaded feed from backend:', response.feed);
+        const formattedFeed = response.feed.map((item: any) => ({
+          id: item._id,
+          headline: item.headline,
+          summary: item.summary,
+          topic: item.topic,
+          source_count: item.sourceCount,
+          trending_score: item.trendingScore,
+          category: item.category,
+          image_url: item.imageUrl,
+          published_at: item.publishedAt,
+          perspectives: {
+            count: item.perspectiveCount,
+            categories: item.perspectives || []
+          }
+        }));
+        
+        setFeedItems(formattedFeed);
+        return;
       }
     } catch (error) {
-      console.error("Error loading feed:", error);
+      console.error("Backend API error:", error);
     }
+    
+    // If backend fails, use minimal mock data
+    setFeedItems([
+      {
+        headline: "Search for any topic to see balanced perspectives",
+        summary: "Enter a search term above to discover different viewpoints on any news topic. Our AI will analyze multiple sources and present balanced perspectives.",
+        topic: "Getting Started",
+        source_count: 0,
+        trending_score: 0,
+        perspectives: {
+          count: 0,
+          categories: []
+        }
+      }
+    ]);
     setIsLoading(false);
   };
 
@@ -175,51 +148,39 @@ function DashboardContent() {
     
     setIsLoading(true);
     try {
-      // Mock additional items
-      const mockAdditionalItems = [
-        {
-          headline: "Renewable Energy Investment Reaches Record Levels",
-          summary: "Global investment in renewable energy has exceeded all previous records, driven by falling costs and policy incentives.",
-          topic: "Energy",
-          source_count: 11,
-          trending_score: 72,
-          perspectives: {
-            count: 3,
-            categories: ["Investment Trends", "Technology Advances", "Policy Drivers"]
-          }
-        },
-        {
-          headline: "International Trade Agreements Face New Challenges",
-          summary: "Existing trade frameworks are being reconsidered as nations prioritize domestic industries and supply chain resilience.",
-          topic: "Trade",
-          source_count: 9,
-          trending_score: 68,
-          perspectives: {
-            count: 3,
-            categories: ["Protectionism vs Globalization", "Supply Chain Security", "Economic Impact"]
-          }
-        },
-        {
-          headline: "Urban Planning Initiatives Focus on Sustainable Cities",
-          summary: "Major cities are implementing innovative urban planning strategies to address climate change and improve quality of life.",
-          topic: "Urban Development",
-          source_count: 8,
-          trending_score: 65,
-          perspectives: {
-            count: 3,
-            categories: ["Environmental Goals", "Infrastructure Needs", "Community Impact"]
-          }
-        }
-      ];
-
-      setFeedItems(prev => [...prev, ...mockAdditionalItems]);
-      setPage(prev => prev + 1);
+      const nextPage = page + 1;
+      const response = await apiClient.getNewsFeed({ page: nextPage, limit: 10 });
       
-      if (page >= 3) {
+      if (response && response.feed && Array.isArray(response.feed) && response.feed.length > 0) {
+        const formattedFeed = response.feed.map((item: any) => ({
+          id: item._id,
+          headline: item.headline,
+          summary: item.summary,
+          topic: item.topic,
+          source_count: item.sourceCount,
+          trending_score: item.trendingScore,
+          category: item.category,
+          image_url: item.imageUrl,
+          published_at: item.publishedAt,
+          perspectives: {
+            count: item.perspectiveCount,
+            categories: item.perspectives || []
+          }
+        }));
+
+        setFeedItems(prev => [...prev, ...formattedFeed]);
+        setPage(nextPage);
+        
+        // Check if we have more pages
+        if (response.pagination && nextPage >= response.pagination.pages) {
+          setHasMore(false);
+        }
+      } else {
         setHasMore(false);
       }
     } catch (error) {
       console.error("Error loading more feed:", error);
+      setHasMore(false);
     }
     setIsLoading(false);
   };
@@ -234,7 +195,11 @@ function DashboardContent() {
   };
 
   if (isLoading && feedItems.length === 0) {
-    return <LoadingState topic="Dashboard" />;
+    return (
+      <div className="min-h-screen bg-[#fafafa] dark:bg-[#0a0a0a] flex items-center justify-center">
+        <LoadingState message="Loading your personalized news feed..." />
+      </div>
+    );
   }
 
   return (
@@ -268,15 +233,15 @@ function DashboardContent() {
             <div className="relative">
               <input
                 type="text"
-                placeholder="Search any topic for balanced perspectives..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-6 py-3 pr-12 rounded-none border-2 border-[#1a1a1a] dark:border-[#d4af37] bg-white dark:bg-[#1a1a1a] font-serif text-lg focus:outline-none focus:border-[#d4af37]"
-                onKeyPress={(e) => {
+                onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     handleSearch(searchQuery);
                   }
                 }}
+                placeholder="Search news topics..."
+                className="w-full px-6 py-4 pr-12 rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-[#d4af37] focus:outline-none transition-colors"
               />
               <button 
                 onClick={() => handleSearch(searchQuery)}
@@ -308,11 +273,11 @@ function DashboardContent() {
         </div>
 
         {/* News Feed */}
-        <AnimatePresence>
+        <AnimatePresence mode="popLayout">
           <div className="space-y-6">
             {feedItems.map((item, index) => (
               <NewsFeedCard
-                key={index}
+                key={item.id || item.headline}
                 item={item}
                 index={index}
                 onClick={() => handleFeedItemClick(item)}

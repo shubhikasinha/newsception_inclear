@@ -37,13 +37,15 @@ export default function DebatePage() {
 
   // Join room function
   async function joinRoom(roomId: string, topic: string, chosenSide: 'A' | 'B') {
+    if (!roomId || !topic) {
+      setError('Invalid room ID or topic');
+      return;
+    }
     setIsConnecting(true);
     setError(null);
     setSide(chosenSide);
     setCurrentTopic(topic);
-    setShowVoting(false);
-
-    try {
+    setShowVoting(false);    try {
       // Get token from API
       const res = await fetch(
         `/api/livekit-token?user=${userId}-${chosenSide}&room=${roomId}`
@@ -361,8 +363,7 @@ export default function DebatePage() {
                             </div>
                           </div>
                           <div className="text-2xl">
-                            {isMuted ? '�' : '🎤'}
-                          </div>
+                            {isMuted ? '🔇' : '🎤'}                          </div>
                         </motion.div>
                       );
                     })}
@@ -399,106 +400,6 @@ export default function DebatePage() {
           )}
         </AnimatePresence>
       </div>
-    </div>
-  );
-}
-
-        <div className="w-full max-w-2xl">
-          {/* Header */}
-          <div className="text-center bg-white dark:bg-gray-800 p-6 rounded-t-3xl shadow-lg">
-            <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
-              Live Debate — Side {side}
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300 mb-1">
-              You are <span className="font-semibold">{userId}</span>
-            </p>
-            <div className="flex justify-center gap-6 text-sm">
-              <span className="text-blue-600 dark:text-blue-400 font-medium">
-                🔵 Side A: {sideCounts.A}
-              </span>
-              <span className="text-red-600 dark:text-red-400 font-medium">
-                🔴 Side B: {sideCounts.B}
-              </span>
-            </div>
-          </div>
-
-          {/* Participants List */}
-          <div className="bg-white dark:bg-gray-800 p-6 max-h-96 overflow-y-auto border-t border-gray-200 dark:border-gray-700">
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-              Participants ({participants.length})
-            </h3>
-            <div className="space-y-2">
-              {participants.map((participant) => {
-                const participantSide = getParticipantSide(participant.identity);
-                const isLocal = participant instanceof LocalParticipant;
-                const isSpeaking = activeSpeakers.has(participant.identity);
-                const isMuted = !participant.isMicrophoneEnabled;
-
-                return (
-                  <div
-                    key={participant.identity}
-                    className={`flex items-center justify-between p-3 rounded-xl transition-all ${
-                      isSpeaking
-                        ? 'bg-green-100 dark:bg-green-900/30 border-2 border-green-500'
-                        : 'bg-gray-50 dark:bg-gray-700 border-2 border-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
-                          participantSide === 'A' ? 'bg-blue-500' : 'bg-red-500'
-                        }`}
-                      >
-                        {participantSide}
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-900 dark:text-white">
-                          {participant.identity}
-                          {isLocal && (
-                            <span className="ml-2 text-xs bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded">
-                              You
-                            </span>
-                          )}
-                        </div>
-                        {isSpeaking && (
-                          <div className="text-xs text-green-600 dark:text-green-400 font-medium">
-                            🎤 Speaking...
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-xl">
-                      {isMuted ? '🔇' : '🎤'}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Controls */}
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-b-3xl shadow-lg">
-            <div className="flex justify-center gap-4">
-              <button
-                onClick={toggleMic}
-                className={`px-6 py-3 rounded-xl font-semibold transition-all transform hover:scale-105 ${
-                  isMicEnabled
-                    ? 'bg-gray-800 hover:bg-gray-700 text-white'
-                    : 'bg-red-500 hover:bg-red-600 text-white'
-                }`}
-              >
-                {isMicEnabled ? '🎤 Mute' : '🔇 Unmute'}
-              </button>
-              <button
-                onClick={leaveRoom}
-                className="bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-white px-6 py-3 rounded-xl font-semibold transition-all transform hover:scale-105"
-              >
-                🚪 Leave
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

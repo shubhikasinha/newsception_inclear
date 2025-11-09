@@ -11,7 +11,7 @@ import EnhancedHeatmap from "../components/compare/EnhancedHeatmap";
 import BiasVisualization from "../components/compare/BiasVisualization";
 import HistoricalTimeline from "../components/history/HistoricalTimeline";
 import FactCheckPanel from "../components/factcheck/FactCheckPanel";
-import LoadingState from "../components/shared/LoadingState";
+import { LoadingState } from "../components/shared/LoadingStates";
 import EnhancedSentimentPanelComponent from "../components/analysis/EnhancedSentimentPanel";
 import { apiClient } from "@/lib/api-client";
 
@@ -60,16 +60,24 @@ function CompareContent() {
     
     try {
       // Try to fetch from backend API
-      try {
-        const result = await apiClient.comparePerspectives(searchTopic);
-        if (result) {
-          // Process API response
-          setPerspectiveData(result);
-          setIsLoading(false);
-          return;
+      console.log('Fetching analysis for topic:', searchTopic);
+      const result = await apiClient.comparePerspectives(searchTopic);
+      
+      if (result && result.positive && result.negative) {
+        console.log('Successfully loaded analysis from backend:', result);
+        setPerspectiveData(result);
+        
+        // Set articles and claims
+        if (result.articles && Array.isArray(result.articles)) {
+          setAllArticles(result.articles);
         }
-      } catch (apiError) {
-        console.log("Backend not available, using mock data");
+        
+        if (result.claims && Array.isArray(result.claims)) {
+          setClaims(result.claims);
+        }
+        
+        setIsLoading(false);
+        return;
       }
 
       // Mock data for demonstration
@@ -205,7 +213,11 @@ function CompareContent() {
   };
 
   if (isLoading) {
-    return <LoadingState topic={topic} />;
+    return (
+      <div className="min-h-screen bg-[#fafafa] dark:bg-[#0a0a0a] flex items-center justify-center">
+        <LoadingState message={`Analyzing "${topic}" from multiple perspectives...`} />
+      </div>
+    );
   }
 
   if (error) {
@@ -225,8 +237,8 @@ function CompareContent() {
 
   if (!perspectiveData) {
     return (
-      <div className="min-h-screen flex items-center justify-center py-12 px-4">
-        <LoadingState topic={topic} />
+      <div className="min-h-screen bg-[#fafafa] dark:bg-[#0a0a0a] flex items-center justify-center py-12 px-4">
+        <LoadingState message={`Loading analysis for "${topic}"...`} />
       </div>
     );
   }
@@ -262,8 +274,7 @@ function CompareContent() {
           <h1 className="font-serif font-bold text-3xl md:text-5xl text-[#1a1a1a] dark:text-white mb-4">
             {topic}
           </h1>
-          <div className="w-24 h-0.5 bg-linear-to-r from-transparent via-[#d4af37] to-transparent mx-auto mb-6" />
-          
+          <div className="w-24 h-0.5 bg-gradient-to-r from-transparent via-[#d4af37] to-transparent mx-auto mb-6" />          
           {/* Info Banner */}
           <div className="rounded-2xl p-4 bg-white dark:bg-[#1a1a1a] max-w-3xl mx-auto border-2 border-gray-200 dark:border-gray-800">
             <div className="flex items-start gap-3">

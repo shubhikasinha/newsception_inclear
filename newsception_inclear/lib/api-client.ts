@@ -80,10 +80,12 @@ class APIClient {
     const url = this.buildUrl(endpoint, params);
 
     const headers: Record<string, string> = {
-      "Content-Type": "application/json",
       ...(rest.headers as Record<string, string> | undefined),
     };
 
+    if (body) {
+      headers["Content-Type"] = "application/json";
+    }
     if (auth) {
       const token = await fetchAuthToken();
       if (token) {
@@ -104,8 +106,10 @@ class APIClient {
       throw new Error(error.message || `HTTP error! status: ${response.status}`);
     }
 
-    return response.json();
-  }
+    if (response.status === 204 || response.headers.get('content-length') === '0') {
+      return {} as T;
+    }
+    return response.json();  }
 
   // News endpoints
   async searchNews(topic: string, location?: string) {
@@ -118,7 +122,15 @@ class APIClient {
     return this.request("/news/trending", { params });
   }
 
-  async getNewsFeed(params?: Record<string, string | number>) {
+  async getNewsFeed(params?: Record<string, string | number>): Promise<{
+    feed: any[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      pages: number;
+    };
+  }> {
     return this.request("/articles/feed/items", { params });
   }
 
@@ -132,7 +144,7 @@ class APIClient {
     return this.request("/analysis/historical", { params });
   }
 
-  async comparePerspectives(topic: string, location?: string, forceRefresh?: boolean) {
+  async comparePerspectives(topic: string, location?: string, forceRefresh?: boolean): Promise<any> {
     return this.request("/analysis/compare", {
       method: "POST",
       body: JSON.stringify({ topic, location, forceRefresh }),
@@ -170,6 +182,13 @@ class APIClient {
     return this.request(`/debate/room/${roomId}/join`, {
       method: "POST",
       body: JSON.stringify({ side }),
+      auth: true,
+    });
+  }
+
+  async voteDebateRequest(requestId: string) {
+    return this.request(`/debate/requests/${requestId}/vote`, {
+      method: "POST",
       auth: true,
     });
   }

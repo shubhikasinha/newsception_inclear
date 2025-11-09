@@ -9,7 +9,9 @@
     "start": "node dist/server.js",
     "test": "jest --coverage",
     "lint": "eslint src/**/*.ts",
-    "format": "prettier --write \"src/**/*.ts\""
+    "format": "prettier --write \"src/**/*.ts\"",
+    "populate": "ts-node src/scripts/populateTrending.ts",
+    "demo": "ts-node src/scripts/quickDemo.ts"
   },
   "keywords": ["news", "bias", "analysis", "debate"],
   "author": "",

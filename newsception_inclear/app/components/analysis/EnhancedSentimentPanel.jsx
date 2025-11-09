@@ -56,8 +56,7 @@ export default function EnhancedSentimentPanel({ articles = [], topic, claims = 
     return () => {
       isMounted = false;
     };
-  }, [topic, articleKey, claimsKey, articles, claims]);
-
+  }, [topic, articleKey, claimsKey]);
   const getSentimentIcon = (sentiment) => {
     switch (sentiment) {
       case 'positive': return <Smile className="w-5 h-5 text-green-500" />;
