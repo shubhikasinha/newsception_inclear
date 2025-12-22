@@ -17,18 +17,6 @@ services:
     networks:
       - newsception-network
 
-  # Redis
-  redis:
-    image: redis:7-alpine
-    container_name: newsception-redis
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - newsception-network
-
   # Backend API
   backend:
     build: .
@@ -40,11 +28,9 @@ services:
       NODE_ENV: production
       PORT: 5000
       MONGODB_URI: mongodb://admin:password123@mongodb:27017/newsception?authSource=admin
-      REDIS_URL: redis://redis:6379
       FRONTEND_URL: http://localhost:3000
     depends_on:
       - mongodb
-      - redis
     networks:
       - newsception-network
     volumes:
@@ -68,4 +54,3 @@ networks:
 
 volumes:
   mongodb_data:
-  redis_data:

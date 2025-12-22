@@ -5,7 +5,6 @@ import morgan from 'morgan';
 import compression from 'compression';
 import dotenv from 'dotenv';
 import { connectDB } from './config/database';
-import { connectRedis } from './config/redis';
 import { logger } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
 import { rateLimiter } from './middleware/rateLimiter';
@@ -78,21 +77,12 @@ app.use((req: Request, res: Response) => {
 // Global error handler
 app.use(errorHandler);
 
-// Database and Redis connections
+// Database connection
 const startServer = async () => {
   try {
     // Connect to MongoDB
     await connectDB();
     logger.info('✅ MongoDB connected successfully');
-
-    // Connect to Redis (optional - non-blocking)
-    try {
-      await connectRedis();
-      logger.info('✅ Redis connected successfully');
-    } catch (redisError) {
-      logger.warn('⚠️  Redis connection failed - running without cache:', redisError);
-      logger.info('💡 App will continue without Redis caching');
-    }
 
     // Start server
     app.listen(PORT, () => {

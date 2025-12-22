@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { curatedMockNews, MockNewsArticleGroup } from '../data/mockNewsData';
 import { logger } from '../utils/logger';
 
 interface NewsArticle {
@@ -128,20 +129,66 @@ export class NewsService {
   }
 
   private getMockNews(topic: string): NewsArticle[]  {
-    const mockSources = [
-      'BBC News', 'CNN', 'The New York Times', 'The Guardian', 
-      'Reuters', 'Associated Press', 'Fox News', 'The Washington Post',
-      'Bloomberg', 'CNBC', 'The Wall Street Journal', 'Al Jazeera'
-    ];
+    const sanitizedTopic = (topic || '').trim();
+    const normalizedTopic = sanitizedTopic.toLowerCase();
 
-    return Array.from({ length: 12 }, (_, i) => ({
-      title: `${topic}: Latest developments and analysis - Part ${i + 1}`,
-      url: `https://example.com/article/${i + 1}`,
-      source: mockSources[i % mockSources.length],
-      description: `Comprehensive analysis of ${topic} from multiple perspectives. This article explores the key developments, implications, and different viewpoints surrounding this important topic.`,
-      publishedAt: new Date(Date.now() - i * 3600000).toISOString(),
-      imageUrl: `https://picsum.photos/seed/${topic}-${i}/800/600`,
-    }));
+    const rankedGroups = curatedMockNews
+      .map(group => ({ group, score: this.calculateKeywordScore(group, normalizedTopic) }))
+      .filter(result => result.score > 0)
+      .sort((a, b) => b.score - a.score);
+
+    const selectedArticles = rankedGroups.length > 0
+      ? rankedGroups[0].group.articles
+      : this.takeLatestArticles(curatedMockNews, 12);
+
+    if (rankedGroups.length > 0) {
+      logger.info(`Serving curated mock news for topic "${sanitizedTopic || topic}" using keyword bucket: ${rankedGroups[0].group.keywords.join(', ')}`);
+    } else {
+      logger.info(`Serving curated mock news fallback set for topic "${sanitizedTopic || topic}"`);
+    }
+
+    return selectedArticles.map(article => ({ ...article }));
+  }
+
+  private calculateKeywordScore(group: MockNewsArticleGroup, normalizedTopic: string): number {
+    if (!normalizedTopic) {
+      return 0;
+    }
+
+    const topicTokens = normalizedTopic.split(/[\s/,-]+/).filter(Boolean);
+
+    return group.keywords.reduce((score, keyword) => {
+      const normalizedKeyword = keyword.toLowerCase();
+
+      if (normalizedTopic === normalizedKeyword) {
+        return score + 6;
+      }
+
+      if (normalizedTopic.includes(normalizedKeyword)) {
+        return score + 4;
+      }
+
+      if (normalizedKeyword.includes(normalizedTopic) && normalizedTopic.length > 3) {
+        return score + 2;
+      }
+
+      const keywordTokens = normalizedKeyword.split(/[\s/,-]+/).filter(token => token.length > 2);
+      const sharedTokens = keywordTokens.filter(token => topicTokens.includes(token));
+
+      if (sharedTokens.length > 0) {
+        return score + sharedTokens.length;
+      }
+
+      return score;
+    }, 0);
+  }
+
+  private takeLatestArticles(groups: MockNewsArticleGroup[], limit: number): NewsArticle[] {
+    return groups
+      .flatMap(group => group.articles)
+      .sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt))
+      .slice(0, limit)
+      .map(article => ({ ...article }));
   }
 }
 

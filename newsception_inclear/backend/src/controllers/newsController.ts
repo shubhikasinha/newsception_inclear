@@ -1,12 +1,8 @@
 import { Request, Response } from 'express';
 import { asyncHandler, CustomError } from '../middleware/errorHandler';
-import { cacheGet, cacheSet } from '../config/redis';
 import SearchHistory from '../models/SearchHistory';
 import LocationTrending from '../models/LocationTrending';
-import { logger } from '../utils/logger';
 import { analyzeTopic } from '../services/topicAnalysisService';
-
-const CACHE_TTL = parseInt(process.env.ARTICLE_CACHE_TTL || '3600');
 
 export const searchNews = asyncHandler(async (req: Request, res: Response) => {
   const { topic, location, refresh } = req.query;
@@ -15,20 +11,8 @@ export const searchNews = asyncHandler(async (req: Request, res: Response) => {
     throw new CustomError('Topic is required', 400);
   }
 
-  // Check cache first
-  const cacheKey = `search:${topic}:${location || 'global'}`;
-  const shouldRefresh = refresh === 'true';
-
-  if (!shouldRefresh) {
-    const cached = await cacheGet(cacheKey);
-    if (cached) {
-      logger.info(`Cache hit for topic: ${topic}`);
-      return res.json(JSON.parse(cached));
-    }
-  }
-
   const analysis = await analyzeTopic(topic, (location as string) || 'global', {
-    forceRefresh: shouldRefresh,
+    forceRefresh: refresh === 'true',
   });
 
   const supportArticles = analysis.groups.support;
@@ -59,10 +43,6 @@ export const searchNews = asyncHandler(async (req: Request, res: Response) => {
     totalSources: analysis.articles.length,
     timestamp: analysis.lastUpdated?.toISOString() || new Date().toISOString(),
   };
-
-  if (!shouldRefresh) {
-    await cacheSet(cacheKey, JSON.stringify(responsePayload), CACHE_TTL);
-  }
 
   return res.json(responsePayload);
 });
